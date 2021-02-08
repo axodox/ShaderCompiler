@@ -116,9 +116,14 @@ namespace ShaderGenerator
   {
     std::filesystem::path Path;
     std::vector<std::unique_ptr<ShaderOption>> Options;
+    std::string Namespace;
     std::string Target;
     std::string EntryPoint = "main";
 
     static ShaderInfo FromFile(const std::filesystem::path& path);
+
+    std::string GenerateHeader() const;
   };
+
+  void WriteAllText(const std::filesystem::path& path, const std::string& text);
 }
