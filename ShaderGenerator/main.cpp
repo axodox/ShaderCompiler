@@ -1,31 +1,39 @@
 ﻿#include "pch.h"
+#include "CommandLineParser.h"
 #include "ShaderConfiguration.h"
-//#include "exprtk.hpp"
+#include "ShaderCompiler.h"
+#include "ShaderOutputWriter.h"
 
 using namespace winrt;
 using namespace ShaderGenerator;
 
-
-int main()
+int main(int argc, char* argv[])
 {
-  init_apartment();
-
-  auto info = ShaderInfo::FromFile("D:\\cae\\dev\\ShaderCompiler\\ShaderGenerator\\ComputeShader.hlsl");
-  auto permutations = ShaderOption::Permutate(info.Options);
-
-  printf("asd");
-  /*exprtk::parser<float> parser;
-  exprtk::expression<float> expression;
-  exprtk::symbol_table<float> symbols;
-  symbols.add_constant("my_const", 2.f);
-  expression.register_symbol_table(symbols);
-  if (!parser.compile("(true and false) or my_const = 1", expression))
+  try
   {
-    printf("fail");
+    init_apartment();
+    
+    auto arguments = ShaderCompilationArguments::Parse(argc, argv);
+    auto info = ShaderInfo::FromFile(arguments.Input);
+
+    CompilationOptions options{};
+    options.IsDebug = arguments.IsDebug;
+    auto output = CompileShader(info, options);
+
+    if (!output.empty())
+    {
+      WriteShaderOutput(arguments.Output, output);
+    }
+    return 0;
   }
-  else
+  catch (const std::exception& error)
   {
-    auto result = expression.value();
-    printf("success");
-  }*/
+    printf("Shader group compilation failed: %s\n", error.what());
+    return -1;
+  }
+  catch (...)
+  {
+    printf("Shader group compilation failed: unknown error.\n");
+    return -1;
+  }
 }

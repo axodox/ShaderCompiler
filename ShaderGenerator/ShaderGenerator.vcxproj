@@ -100,23 +100,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="exprtk.hpp" />
+    <ClInclude Include="CommandLineParser.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ShaderCompiler.h" />
     <ClInclude Include="ShaderConfiguration.h" />
+    <ClInclude Include="ShaderOutputWriter.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CommandLineParser.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ShaderCompiler.cpp" />
     <ClCompile Include="ShaderConfiguration.cpp" />
+    <ClCompile Include="ShaderOutputWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="PropertySheet.props" />
-    <Text Include="readme.txt">
-      <DeploymentContent>false</DeploymentContent>
-    </Text>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ComputeShader.hlsl">
