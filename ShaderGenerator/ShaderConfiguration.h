@@ -33,6 +33,8 @@ namespace ShaderGenerator
     virtual bool TryGetDefinedValue(size_t index, std::string& value) const = 0;
 
     static std::vector<OptionPermutation> Permutate(const std::vector<std::unique_ptr<ShaderOption>>& options);
+
+    virtual ~ShaderOption() = default;
   };
 
   struct BooleanOption : public ShaderOption

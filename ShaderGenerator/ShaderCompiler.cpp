@@ -113,7 +113,7 @@ namespace ShaderGenerator
       thread = CreateThread(nullptr, 0, &CompileWorker, &context, 0, nullptr);
     }
 
-    WaitForMultipleObjects(threads.size(), threads.data(), true, INFINITE);
+    WaitForMultipleObjects(DWORD(threads.size()), threads.data(), true, INFINITE);
     if (context.IsFailed)
     {
       printf("Shader group compilation failed.\n");

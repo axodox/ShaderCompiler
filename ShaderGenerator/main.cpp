@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 
     if (!arguments.Header.empty())
     {
-      printf("Generating header for shader group: %s", arguments.Input.c_str());
+      printf("Generating header for shader group: %s", arguments.Input.string().c_str());
       auto header = info.GenerateHeader();
       WriteAllText(arguments.Header, header);
     }
