@@ -25,6 +25,11 @@ namespace ShaderGenerator
           result.Output = string(match[2]);
           result.Output = result.Output / result.Input.filename().replace_extension(".csg");
         }
+        else if (match[1] == "h")
+        {
+          result.Header = string(match[2]);
+          result.Header = result.Header / result.Input.filename().replace_extension(".h");
+        }
         else if (match[1] == "d")
         {
           result.IsDebug = true;

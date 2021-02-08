@@ -5,7 +5,7 @@ namespace ShaderGenerator
 {
   struct ShaderCompilationArguments
   {
-    std::filesystem::path Input, Output;
+    std::filesystem::path Input, Output, Header;
     bool IsDebug;
 
     static ShaderCompilationArguments Parse(int argc, char* argv[]);

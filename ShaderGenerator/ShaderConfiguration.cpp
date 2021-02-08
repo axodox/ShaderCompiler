@@ -63,7 +63,7 @@ namespace ShaderGenerator
     ShaderInfo result{};
     result.Path = path;
 
-    static regex regex("#pragma\\s+(target|entry|option)\\s+(.*)");
+    static regex regex("#pragma\\s+(target|namespace|entry|option)\\s+(.*)");
     ifstream file(path);
     string line;
     while (getline(file, line))
@@ -74,6 +74,10 @@ namespace ShaderGenerator
         if (match[1] == "target")
         {
           result.Target = match[2];
+        }
+        else if (match[1] == "namespace")
+        {
+          result.Namespace = match[2];
         }
         else if (match[1] == "entry")
         {
@@ -88,6 +92,53 @@ namespace ShaderGenerator
     }
 
     return result;
+  }
+
+  std::string ShaderInfo::GenerateHeader() const
+  {
+    stringstream text;
+    text << "#pragma once\n";
+    text << "#include \"pch.h\"\n";
+    text << "\n";
+    text << "namespace " << Namespace.c_str() << "\n";
+    text << "{\n";
+    text << "  enum class " << Path.filename().replace_extension().string().c_str() << "Flags : uint64_t\n";
+    text << "  {\n";
+    text << "    Default = 0,\n";
+    auto offset = 0;
+    for (auto& option : Options)
+    {
+      switch (option->Type())
+      {
+      case OptionType::Boolean:
+        text << "    " << option->Name.c_str() << " = " << (1 << offset) << ",\n";
+        break;
+      case OptionType::Enumeration:
+      {
+        auto enumerationOption = static_cast<const EnumerationOption*>(option.get());
+        for (auto i = 0; i < enumerationOption->Values.size(); i++)
+        {
+          text << "    " << option->Name.c_str() << enumerationOption->Values[i].c_str() << " = " << (i << offset) << ",\n";
+        }
+        break;
+      }
+      case OptionType::Integer:
+      {
+        auto integerOption = static_cast<const IntegerOption*>(option.get());
+        auto range = integerOption->Maximum - integerOption->Minimum;
+        for (auto i = 0; i < range; i++)
+        {
+          text << "    " << option->Name.c_str() << (i + integerOption->Minimum) << " = " << (i << offset) << ",\n";
+        }
+        break;
+      }
+      }
+
+      offset += option->KeyLength();
+    }
+    text << "  };\n";
+    text << "}\n";
+    return text.str();
   }
 
   std::vector<OptionPermutation> ShaderOption::Permutate(const std::vector<std::unique_ptr<ShaderOption>>& options)
@@ -140,5 +191,11 @@ namespace ShaderGenerator
     }
 
     return results;
+  }
+  
+  void WriteAllText(const std::filesystem::path& path, const std::string& text)
+  {
+    ofstream stream(path);
+    stream << text;
   }
 }

@@ -16,13 +16,23 @@ int main(int argc, char* argv[])
     auto arguments = ShaderCompilationArguments::Parse(argc, argv);
     auto info = ShaderInfo::FromFile(arguments.Input);
 
-    CompilationOptions options{};
-    options.IsDebug = arguments.IsDebug;
-    auto output = CompileShader(info, options);
-
-    if (!output.empty())
+    if (!arguments.Header.empty())
     {
-      WriteShaderOutput(arguments.Output, output);
+      printf("Generating header for shader group: %s", arguments.Input.c_str());
+      auto header = info.GenerateHeader();
+      WriteAllText(arguments.Header, header);
+    }
+
+    if (!arguments.Output.empty())
+    {
+      CompilationOptions options{};
+      options.IsDebug = arguments.IsDebug;
+      auto output = CompileShader(info, options);
+
+      if (!output.empty())
+      {
+        WriteShaderOutput(arguments.Output, output);
+      }
     }
     return 0;
   }

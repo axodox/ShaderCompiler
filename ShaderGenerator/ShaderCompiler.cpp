@@ -68,7 +68,7 @@ namespace ShaderGenerator
       //Print out messages
       stringstream messages{ (char*)errors->GetBufferPointer() };
       string message;
-      static regex warningIgnoreRegex(".*: warning X3568: '(target|entry|option)' : unknown pragma ignored");
+      static regex warningIgnoreRegex(".*: warning X3568: '(target|namespace|entry|option)' : unknown pragma ignored");
       {
         lock_guard<mutex> lock(context.MessagesMutex);
         while (getline(messages, message, '\n'))
