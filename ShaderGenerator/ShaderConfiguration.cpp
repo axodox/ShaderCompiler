@@ -105,7 +105,7 @@ namespace ShaderGenerator
     text << "  enum class " << Path.filename().replace_extension().string().c_str() << "Flags : uint64_t\n";
     text << "  {\n";
     text << "    Default = 0,\n";
-    auto offset = 0;
+    size_t offset = 0;
     for (auto& option : Options)
     {
       switch (option->Type())

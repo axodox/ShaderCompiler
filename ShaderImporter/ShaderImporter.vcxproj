@@ -7,9 +7,9 @@
     <CppWinRTGenerateWindowsMetadata>true</CppWinRTGenerateWindowsMetadata>
     <MinimalCoreWin>true</MinimalCoreWin>
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{9e6ba8fb-e5fe-4d9d-a8e6-aa95217d20e2}</ProjectGuid>
+    <ProjectGuid>{5223bea5-7d7b-40ca-a6e8-38a213cf5151}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ShaderGenerator</RootNamespace>
+    <RootNamespace>ShaderImporter</RootNamespace>
     <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.18362.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.17134.0</WindowsTargetPlatformMinVersion>
   </PropertyGroup>
@@ -60,22 +60,6 @@
     <Import Project="PropertySheet.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
-  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -116,25 +100,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CommandLineParser.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="ShaderCompiler.h" />
-    <ClInclude Include="ShaderConfiguration.h" />
-    <ClInclude Include="ShaderOutputWriter.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CommandLineParser.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="ShaderCompiler.cpp" />
-    <ClCompile Include="ShaderConfiguration.cpp" />
-    <ClCompile Include="ShaderOutputWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="PropertySheet.props" />
+    <Text Include="readme.txt">
+      <DeploymentContent>false</DeploymentContent>
+    </Text>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
