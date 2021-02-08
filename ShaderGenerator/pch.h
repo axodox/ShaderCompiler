@@ -2,6 +2,11 @@
 #include <filesystem>
 #include <fstream>
 #include <regex>
+#include <queue>
+#include <mutex>
+#include <thread>
+#include <sstream>
+#include <unordered_set>
 
 #include <winrt/base.h>
 
