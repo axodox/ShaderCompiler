@@ -12,6 +12,7 @@ int main()
     D3D_SHADER_MACRO defines[] = { "fail", "1", NULL, NULL };
 
     com_ptr<ID3DBlob> code, errors;
+    
     D3DCompileFromFile(
       L"C:\\cae\\dev\\asgard\\Holomaps.MapService\\InsetVertexShader.hlsl",
       defines,

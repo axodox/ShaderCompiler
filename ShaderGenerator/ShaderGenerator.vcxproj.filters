@@ -21,6 +21,7 @@
     <ClInclude Include="exprtk.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderConfiguration.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -29,6 +30,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ShaderConfiguration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PropertySheet.props" />
@@ -36,5 +38,8 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="ComputeShader.hlsl" />
   </ItemGroup>
 </Project>

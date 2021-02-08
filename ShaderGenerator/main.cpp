@@ -1,18 +1,25 @@
 ﻿#include "pch.h"
-#include "exprtk.hpp"
+#include "ShaderConfiguration.h"
+//#include "exprtk.hpp"
 
 using namespace winrt;
-using namespace Windows::Foundation;
+using namespace ShaderGenerator;
+
 
 int main()
 {
   init_apartment();
-  Uri uri(L"http://aka.ms/cppwinrt");
-  printf("Hello, %ls!\n", uri.AbsoluteUri().c_str());
 
-  exprtk::parser<int> parser;
-  exprtk::expression<int> expression;
-  if (!parser.compile("true or false", expression))
+  auto info = ShaderInfo::FromFile("D:\\cae\\dev\\ShaderCompiler\\ShaderGenerator\\ComputeShader.hlsl");
+  auto permutations = ShaderOption::Permutate(info.Options);
+
+  printf("asd");
+  /*exprtk::parser<float> parser;
+  exprtk::expression<float> expression;
+  exprtk::symbol_table<float> symbols;
+  symbols.add_constant("my_const", 2.f);
+  expression.register_symbol_table(symbols);
+  if (!parser.compile("(true and false) or my_const = 1", expression))
   {
     printf("fail");
   }
@@ -20,5 +27,5 @@ int main()
   {
     auto result = expression.value();
     printf("success");
-  }
+  }*/
 }
