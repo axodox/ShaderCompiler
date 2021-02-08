@@ -3,10 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29324.140
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderCompiler", "ShaderCompiler\ShaderCompiler.vcxproj", "{5D060984-1D92-4D94-946F-0CE5079752F1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShaderCompilerTask", "ShaderCompilerTask\ShaderCompilerTask.csproj", "{83F1F36F-73ED-4C81-84A5-65900F857D62}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderGenerator", "ShaderGenerator\ShaderGenerator.vcxproj", "{9E6BA8FB-E5FE-4D9D-A8E6-AA95217D20E2}"
 EndProject
 Global
@@ -19,28 +15,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Debug|x64.ActiveCfg = Debug|x64
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Debug|x64.Build.0 = Debug|x64
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Debug|x86.ActiveCfg = Debug|Win32
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Debug|x86.Build.0 = Debug|Win32
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Release|Any CPU.ActiveCfg = Release|Win32
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Release|x64.ActiveCfg = Release|x64
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Release|x64.Build.0 = Release|x64
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Release|x86.ActiveCfg = Release|Win32
-		{5D060984-1D92-4D94-946F-0CE5079752F1}.Release|x86.Build.0 = Release|Win32
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|x64.Build.0 = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Debug|x86.Build.0 = Debug|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|Any CPU.Build.0 = Release|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|x64.ActiveCfg = Release|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|x64.Build.0 = Release|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|x86.ActiveCfg = Release|Any CPU
-		{83F1F36F-73ED-4C81-84A5-65900F857D62}.Release|x86.Build.0 = Release|Any CPU
 		{9E6BA8FB-E5FE-4D9D-A8E6-AA95217D20E2}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{9E6BA8FB-E5FE-4D9D-A8E6-AA95217D20E2}.Debug|x64.ActiveCfg = Debug|x64
 		{9E6BA8FB-E5FE-4D9D-A8E6-AA95217D20E2}.Debug|x64.Build.0 = Debug|x64
