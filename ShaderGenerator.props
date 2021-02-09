@@ -2,6 +2,12 @@
   <ItemGroup>
     <PropertyPageSchema Include="$(MSBuildThisFileDirectory)ShaderGenerator.xml"/>
   </ItemGroup>
+  
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(IntDir)ShaderGenerator;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
 
   <ItemDefinitionGroup>
     <ShaderGroup>

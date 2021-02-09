@@ -11,8 +11,7 @@
    PageTemplate="tool"
    DisplayName="Shader Generator"
    SwitchPrefix="-"
-   Order="20"
-   >
+   Order="20">
 
     <Rule.Categories>
       <Category
