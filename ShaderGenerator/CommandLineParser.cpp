@@ -35,8 +35,11 @@ namespace ShaderGenerator
           result.IsDebug = true;
         }
       }
+    }
 
-      
+    if (result.Input.empty())
+    {
+      throw exception("Please specify an input file using -i=<file>.");
     }
     return result;
   }

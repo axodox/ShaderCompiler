@@ -65,6 +65,11 @@ namespace ShaderGenerator
 
     static regex regex("#pragma\\s+(target|namespace|entry|option)\\s+(.*)");
     ifstream file(path);
+    if (!file.good())
+    {
+      throw std::exception(("Failed to open file " + path.string()).c_str());
+    }
+
     string line;
     while (getline(file, line))
     {
@@ -193,9 +198,29 @@ namespace ShaderGenerator
     return results;
   }
   
-  void WriteAllText(const std::filesystem::path& path, const std::string& text)
+  void WriteHeader(const std::filesystem::path& path, const ShaderInfo& shader)
   {
-    ofstream stream(path);
-    stream << text;
+    printf("Generating header for shader group: %s...\n", shader.Path.string().c_str());
+    auto header = shader.GenerateHeader();
+
+    error_code ec;
+    filesystem::create_directory(path.parent_path(), ec);
+    if (ec)
+    {
+      printf("Failed to create output directory at %s.\n", path.parent_path().string().c_str());
+    }
+    else
+    {
+      ofstream stream(path, ios::out);
+      if (stream.good())
+      {
+        stream << header;
+        printf("Output saved to %s.\n", path.string().c_str());
+      }
+      else
+      {
+        printf("Failed to save output to %s.\n", path.string().c_str());
+      }
+    }
   }
 }
