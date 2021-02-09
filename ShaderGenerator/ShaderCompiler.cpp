@@ -72,7 +72,7 @@ namespace ShaderGenerator
 
       //Run compilation
       com_ptr<ID3DBlob> binary, errors;
-      check_hresult(D3DCompileFromFile(
+      auto result = D3DCompileFromFile(
         context.Shader->Path.c_str(),
         macros.data(),
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -81,7 +81,7 @@ namespace ShaderGenerator
         flags,
         0u,
         binary.put(),
-        errors.put()));
+        errors.put());
 
       //Print out messages
       stringstream messages{ (char*)errors->GetBufferPointer() };
@@ -99,7 +99,7 @@ namespace ShaderGenerator
       }
 
       //If successful return binary
-      if (binary)
+      if (SUCCEEDED(result))
       {
         vector<uint8_t> data(binary->GetBufferSize());
         memcpy(data.data(), binary->GetBufferPointer(), binary->GetBufferSize());

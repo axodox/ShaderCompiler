@@ -7,7 +7,7 @@
 #pragma asd
 
 [numthreads(1, 1, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-
+  asdfadfgasasd asd asd 
 }
