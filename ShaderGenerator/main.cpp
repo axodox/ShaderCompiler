@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "CommandLineParser.h"
+#include "ShaderCompilationArguments.h"
 #include "ShaderConfiguration.h"
 #include "ShaderCompiler.h"
 #include "ShaderOutputWriter.h"
@@ -19,7 +19,9 @@ int main(int argc, char* argv[])
     printf("  -i=<file_path>: Path of the source code\n");
     printf("  -o=<dir_path>: Path of the output directory\n");
     printf("  -h=<dir_path>: Path of the include header\n");
-    printf("  -d: Debug mode with debug symbols\n");
+    printf("  -n=<namespace>: Header namespace name\n");
+    printf("  -p=0..4: Optimization level\n");
+    printf("  -d: Emit debug symbols\n");        
     printf("\n");
 
     printf("Source file usage:\n");
@@ -41,14 +43,12 @@ int main(int argc, char* argv[])
 
     if (!arguments.Header.empty())
     {
-      WriteHeader(arguments.Header, shader);
+      WriteHeader(arguments, shader);
     }
 
     if (!arguments.Output.empty())
     {
-      CompilationOptions options{};
-      options.IsDebug = arguments.IsDebug;
-      auto output = CompileShader(shader, options);
+      auto output = CompileShader(shader, arguments);
 
       if (!output.empty())
       {

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Rule 
+   Name="SG1"
+   PageTemplate="tool"
+   DisplayName="SG1"
+   SwitchPrefix="/"
+   Order="20"
+   xmlns="http://schemas.microsoft.com/build/2009/properties"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+  <Rule.Categories>
+    <Category
+       Name="General"
+       DisplayName="General" />
+  </Rule.Categories>
+
+  <Rule.DataSource>
+    <DataSource
+       Persistence="ProjectFile"
+       ItemType="ShaderGroup"
+       Label=""
+       HasConfigurationCondition="true" />
+  </Rule.DataSource>
+
+  <StringProperty
+     Subtype="file"
+     Name="OutputFile"
+     DisplayName="Output File"
+     Description="The /OUT option overrides the default name and location of the program that the linker creates."
+     Category="General"
+     Switch="OUT"
+     Separator=":"
+     F1Keyword="VC.Project.VCLinkerTool.OutputFile"/>
+</Rule>

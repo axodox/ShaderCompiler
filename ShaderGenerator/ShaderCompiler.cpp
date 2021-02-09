@@ -9,7 +9,7 @@ namespace ShaderGenerator
   struct ShaderCompilationContext
   {
     const ShaderInfo* Shader;
-    const CompilationOptions* Options;
+    const ShaderCompilationArguments* Options;
     queue<const OptionPermutation*> Input;
     bool IsFailed = false;
 
@@ -17,7 +17,7 @@ namespace ShaderGenerator
     vector<CompiledShader> Output;
     unordered_set<string> Messages;
 
-    ShaderCompilationContext(const ShaderInfo& info, const CompilationOptions& options, const vector<OptionPermutation>& permutations) :
+    ShaderCompilationContext(const ShaderInfo& info, const ShaderCompilationArguments& options, const vector<OptionPermutation>& permutations) :
       Shader(&info),
       Options(&options)
     {
@@ -52,6 +52,24 @@ namespace ShaderGenerator
       }
       macros.push_back({ nullptr, nullptr });
 
+      auto flags = 0u;
+      if (context.Options->IsDebug) flags |= D3DCOMPILE_DEBUG;
+      switch (context.Options->OptimizationLevel)
+      {
+      case 0:
+        flags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;
+        break;
+      case 1:
+        flags |= D3DCOMPILE_OPTIMIZATION_LEVEL1;
+        break;
+      case 2:
+        flags |= D3DCOMPILE_OPTIMIZATION_LEVEL2;
+        break;
+      case 3:
+        flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+        break;
+      }
+
       //Run compilation
       com_ptr<ID3DBlob> binary, errors;
       check_hresult(D3DCompileFromFile(
@@ -60,7 +78,7 @@ namespace ShaderGenerator
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         context.Shader->EntryPoint.c_str(),
         context.Shader->Target.c_str(),
-        context.Options->IsDebug ? D3DCOMPILE_DEBUG : D3DCOMPILE_OPTIMIZATION_LEVEL3,
+        flags,
         0u,
         binary.put(),
         errors.put()));
@@ -98,13 +116,14 @@ namespace ShaderGenerator
     return 0;
   }
 
-  vector<CompiledShader> ShaderGenerator::CompileShader(const ShaderInfo& shader, const CompilationOptions& options)
+  vector<CompiledShader> ShaderGenerator::CompileShader(const ShaderInfo& shader, const ShaderCompilationArguments& options)
   {
     auto permutations = ShaderOption::Permutate(shader.Options);
     ShaderCompilationContext context{shader, options, permutations};
 
-    wprintf(L"Compiling %s...\n", shader.Path.c_str());
-    printf("Generating %zu shader variants.\n", permutations.size());
+    printf("Compiling %s at optimization level %d", shader.Path.string().c_str(), options.OptimizationLevel);
+    if (options.IsDebug) printf(" with debug symbols");
+    printf("...\n Generating %zu shader variants.\n", permutations.size());
 
     auto threadCount = min(thread::hardware_concurrency(), permutations.size());
     vector<HANDLE> threads(threadCount);

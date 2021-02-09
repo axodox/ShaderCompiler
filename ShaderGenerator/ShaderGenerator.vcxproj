@@ -116,14 +116,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CommandLineParser.h" />
+    <ClInclude Include="ShaderCompilationArguments.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShaderCompiler.h" />
     <ClInclude Include="ShaderConfiguration.h" />
     <ClInclude Include="ShaderOutputWriter.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CommandLineParser.cpp" />
+    <ClCompile Include="ShaderCompilationArguments.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

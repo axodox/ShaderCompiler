@@ -1,5 +1,6 @@
 #pragma once
 #include "ShaderConfiguration.h"
+#include "ShaderCompilationArguments.h"
 
 namespace ShaderGenerator
 {
@@ -9,10 +10,5 @@ namespace ShaderGenerator
     std::vector<uint8_t> Data;
   };
 
-  struct CompilationOptions
-  {
-    bool IsDebug = false;
-  };
-
-  std::vector<CompiledShader> CompileShader(const ShaderInfo& shader, const CompilationOptions& options = {});
+  std::vector<CompiledShader> CompileShader(const ShaderInfo& shader, const ShaderCompilationArguments& options = {});
 }

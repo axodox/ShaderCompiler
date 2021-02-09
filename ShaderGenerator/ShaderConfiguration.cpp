@@ -99,15 +99,14 @@ namespace ShaderGenerator
     return result;
   }
 
-  std::string ShaderInfo::GenerateHeader() const
+  std::string ShaderInfo::GenerateHeader(const std::string& namespaceName) const
   {
     stringstream text;
     text << "#pragma once\n";
-    text << "#include \"pch.h\"\n";
     text << "\n";
-    text << "namespace " << Namespace.c_str() << "\n";
+    text << "namespace " << namespaceName.c_str() << "\n";
     text << "{\n";
-    text << "  enum class " << Path.filename().replace_extension().string().c_str() << "Flags : uint64_t\n";
+    text << "  enum class " << Path.filename().replace_extension().string().c_str() << "Flags : unsigned long long\n";
     text << "  {\n";
     text << "    Default = 0,\n";
     size_t offset = 0;
@@ -198,28 +197,33 @@ namespace ShaderGenerator
     return results;
   }
   
-  void WriteHeader(const std::filesystem::path& path, const ShaderInfo& shader)
+  void WriteHeader(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)
   {
-    printf("Generating header for shader group: %s...\n", shader.Path.string().c_str());
-    auto header = shader.GenerateHeader();
+    string namespaceName;
+    if (!shader.Namespace.empty()) namespaceName = shader.Namespace;
+    else if (!arguments.NamespaceName.empty()) namespaceName = arguments.NamespaceName;
+    else namespaceName = "ShaderGenerator";
+
+    printf("Generating header for shader group %s at namespace %s...\n", shader.Path.string().c_str(), namespaceName.c_str());
+    auto header = shader.GenerateHeader(namespaceName);
 
     error_code ec;
-    filesystem::create_directory(path.parent_path(), ec);
+    filesystem::create_directory(arguments.Header.parent_path(), ec);
     if (ec)
     {
-      printf("Failed to create output directory at %s.\n", path.parent_path().string().c_str());
+      printf("Failed to create output directory at %s.\n", arguments.Header.parent_path().string().c_str());
     }
     else
     {
-      ofstream stream(path, ios::out);
+      ofstream stream(arguments.Header, ios::out);
       if (stream.good())
       {
         stream << header;
-        printf("Output saved to %s.\n", path.string().c_str());
+        printf("Output saved to %s.\n", arguments.Header.string().c_str());
       }
       else
       {
-        printf("Failed to save output to %s.\n", path.string().c_str());
+        printf("Failed to save output to %s.\n", arguments.Header.string().c_str());
       }
     }
   }

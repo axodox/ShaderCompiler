@@ -10,11 +10,11 @@
     <ClInclude Include="ShaderOutputWriter.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="CommandLineParser.h">
-      <Filter>Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Config</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderCompilationArguments.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -28,11 +28,11 @@
     <ClCompile Include="ShaderOutputWriter.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="CommandLineParser.cpp">
-      <Filter>Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>Config</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderCompilationArguments.cpp">
+      <Filter>Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
