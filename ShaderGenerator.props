@@ -1,0 +1,13 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)ShaderGenerator.xml"/>
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <ShaderGroup>
+      <IsEmittingDebugSymbols>true</IsEmittingDebugSymbols>
+      <OptimizationLevel>2</OptimizationLevel>
+      <HeaderNamespace>$(ProjectName)::Shaders</HeaderNamespace>
+    </ShaderGroup>
+  </ItemDefinitionGroup>
+</Project>

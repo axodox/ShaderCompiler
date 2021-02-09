@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "CommandLineParser.h"
+#include "ShaderCompilationArguments.h"
 
 using namespace std;
 
@@ -32,7 +32,18 @@ namespace ShaderGenerator
         }
         else if (match[1] == "d")
         {
-          result.IsDebug = true;
+          if (!match[2].matched && match[2] == "true")
+          {
+            result.IsDebug = true;
+          }
+        }
+        else if (match[1] == "p")
+        {
+          result.OptimizationLevel = stoi(match[2]);
+        }
+        else if (match[1] == "n")
+        {
+          result.NamespaceName = match[2];
         }
       }
     }

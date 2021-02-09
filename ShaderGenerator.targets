@@ -1,0 +1,15 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <AvailableItemName Include="ShaderGroup">
+      <Targets>BuildShaderGroups</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+
+  <Target Name="BuildShaderGroups"
+          BeforeTargets="ClCompile"
+          Inputs="%(ShaderGroup.Identity)"
+          Outputs="$(OutDir)%(ShaderGroup.Filename).csg;$(IntDir)ShaderGenerator\%(ShaderGroup.Filename).h">    
+      <Message Text="%(ShaderGroup.Identity)" />
+      <Exec Command="D:\cae\dev\ShaderCompiler\ShaderGenerator\bin\Debug\x64\ShaderGenerator.exe -i=%(ShaderGroup.Identity) -o=$(OutDir) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols)"/>
+  </Target>
+</Project>

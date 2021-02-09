@@ -1,5 +1,5 @@
 #pragma once
-#include "pch.h"
+#include "ShaderCompilationArguments.h"
 
 namespace ShaderGenerator
 {
@@ -124,8 +124,8 @@ namespace ShaderGenerator
 
     static ShaderInfo FromFile(const std::filesystem::path& path);
 
-    std::string GenerateHeader() const;
+    std::string GenerateHeader(const std::string& namespaceName = {}) const;
   };
 
-  void WriteHeader(const std::filesystem::path& path, const ShaderInfo& shader);
+  void WriteHeader(const ShaderCompilationArguments& path, const ShaderInfo& shader);
 }
