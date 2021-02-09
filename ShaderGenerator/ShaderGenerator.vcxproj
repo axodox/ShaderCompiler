@@ -61,20 +61,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)bin/$(Configuration)/$(Platform)/</OutDir>
-    <IntDir>$(ProjectDir)obj/$(Configuration)/$(Platform)/</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -95,11 +95,17 @@
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <ClCompile>
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
@@ -114,6 +120,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ShaderCompilationArguments.h" />

@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "../Test/Header/ComputeShader.h"
+#include "ComputeShader.h"
 #include "ShaderGenerator.h"
 
 using namespace std;
