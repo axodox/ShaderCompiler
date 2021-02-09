@@ -9,12 +9,34 @@
           BeforeTargets="ClCompile"
           Inputs="@(ShaderGroup)"
           Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
-      <Exec Command="D:\cae\dev\ShaderCompiler\ShaderGenerator\bin\Debug\x64\ShaderGenerator.exe -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols)"/>
+    <Exec Command="D:\cae\dev\ShaderCompiler\ShaderGenerator\bin\Debug\x64\ShaderGenerator.exe -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols)"/>
+
+    <PropertyGroup>
+      <TrackingData>
+^%(ShaderGroup.FullPath)
+$(OutDir)%(Filename).csg
+      </TrackingData>
+    </PropertyGroup>
+
+    <WriteLinesToFile 
+      File="$(IntDir)$(ProjectName).tlog\ShaderGenerator.write.tlog"
+      Lines="$(TrackingData)"/>
   </Target>
   <Target Name="GenerateShaderGroupHeaders"
           BeforeTargets="ClCompile"
           Inputs="@(ShaderGroup)"
           Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
-      <Exec Command="D:\cae\dev\ShaderCompiler\ShaderGenerator\bin\Debug\x64\ShaderGenerator.exe -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace)"/>
+    <Exec Command="D:\cae\dev\ShaderCompiler\ShaderGenerator\bin\Debug\x64\ShaderGenerator.exe -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace)"/>
+
+    <PropertyGroup>
+      <TrackingData>
+^%(ShaderGroup.FullPath)
+$(IntDir)ShaderGenerator\%(Filename).h
+      </TrackingData>
+    </PropertyGroup>
+
+    <WriteLinesToFile 
+      File="$(IntDir)$(ProjectName).tlog\ShaderGenerator.write.tlog"
+      Lines="$(TrackingData)"/>
   </Target>
 </Project>
