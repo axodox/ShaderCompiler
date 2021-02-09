@@ -54,7 +54,7 @@ namespace ShaderGenerator
 
       //Run compilation
       com_ptr<ID3DBlob> binary, errors;
-      D3DCompileFromFile(
+      check_hresult(D3DCompileFromFile(
         context.Shader->Path.c_str(),
         macros.data(),
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -63,7 +63,7 @@ namespace ShaderGenerator
         context.Options->IsDebug ? D3DCOMPILE_DEBUG : D3DCOMPILE_OPTIMIZATION_LEVEL3,
         0u,
         binary.put(),
-        errors.put());
+        errors.put()));
 
       //Print out messages
       stringstream messages{ (char*)errors->GetBufferPointer() };

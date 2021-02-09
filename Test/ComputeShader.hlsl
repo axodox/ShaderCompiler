@@ -1,6 +1,6 @@
 #pragma target cs_5_0
 #pragma entry main
-#pragma namespace Holomaps::Graphics::Shaders
+#pragma namespace MyApp::Shaders
 #pragma option bool IS_X
 #pragma option enum EN {val1, val2, val3}
 #pragma option int Y {1..12}

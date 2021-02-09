@@ -127,5 +127,5 @@ namespace ShaderGenerator
     std::string GenerateHeader() const;
   };
 
-  void WriteAllText(const std::filesystem::path& path, const std::string& text);
+  void WriteHeader(const std::filesystem::path& path, const ShaderInfo& shader);
 }
