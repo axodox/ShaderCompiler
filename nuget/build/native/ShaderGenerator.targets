@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <AvailableItemName Include="ShaderGroup">
+      <Targets>BuildShaderGroups;GenerateShaderGroupHeaders;CleanOutput</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ShaderGeneratorPath>$(MSBuildThisFileDirectory)..\..\bin\ShaderGenerator.exe</ShaderGeneratorPath>
+  </PropertyGroup>
+
+  <Target Name="BuildShaderGroups"
+          BeforeTargets="ClCompile"
+          Inputs="@(ShaderGroup)"
+          Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
+    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols)"/>
+  </Target>
+  <Target Name="GenerateShaderGroupHeaders"
+          BeforeTargets="ClCompile"
+          Inputs="@(ShaderGroup)"
+          Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
+    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace)"/>
+  </Target>
+
+  <Target Name="CleanOutput" AfterTargets="Clean">
+    <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')"/>
+    <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')"/>
+  </Target>
+</Project>
