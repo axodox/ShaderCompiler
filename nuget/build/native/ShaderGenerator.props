@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)ShaderGenerator.xml"/>
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\..\include;$(IntDir)ShaderGenerator;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup>
+    <ShaderGroup>
+      <IsEmittingDebugSymbols>true</IsEmittingDebugSymbols>
+      <OptimizationLevel>2</OptimizationLevel>
+      <HeaderNamespace>$(ProjectName)::Shaders</HeaderNamespace>
+    </ShaderGroup>
+  </ItemDefinitionGroup>
+</Project>

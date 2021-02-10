@@ -96,7 +96,7 @@
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)nuget\bin\ShaderGenerator.exe /y /b</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
@@ -104,7 +104,7 @@
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)nuget\bin\ShaderGenerator.exe /y /b</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -121,10 +121,10 @@
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)nuget\bin\ShaderGenerator.exe /y /b</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)ShaderGenerator.exe /y /b</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy $(OutDir)ShaderGenerator.exe $(SolutionDir)nuget\bin\ShaderGenerator.exe /y /b</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
