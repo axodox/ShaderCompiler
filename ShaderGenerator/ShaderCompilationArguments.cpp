@@ -45,6 +45,10 @@ namespace ShaderGenerator
         {
           result.NamespaceName = match[2];
         }
+        else if (match[1] == "t")
+        {
+          result.WaitForDebugger = true;
+        }
       }
     }
 

@@ -57,7 +57,7 @@ namespace ShaderGenerator
 
     return nullptr;
   }
-  
+
   ShaderInfo ShaderInfo::FromFile(const std::filesystem::path& path)
   {
     ShaderInfo result{};
@@ -88,7 +88,7 @@ namespace ShaderGenerator
         {
           result.EntryPoint = match[2];
         }
-        else if(match[1] == "option")
+        else if (match[1] == "option")
         {
           auto option = ParseOption(match[2]);
           if (option) result.Options.push_back(move(option));
@@ -147,6 +147,11 @@ namespace ShaderGenerator
 
   std::vector<OptionPermutation> ShaderOption::Permutate(const std::vector<std::unique_ptr<ShaderOption>>& options)
   {
+    if (options.empty())
+    {
+      return { {} };
+    }
+
     std::vector<size_t> indices(options.size());
     size_t currentIndex = 0;
     auto done = false;
@@ -196,7 +201,7 @@ namespace ShaderGenerator
 
     return results;
   }
-  
+
   void WriteHeader(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)
   {
     string namespaceName;
