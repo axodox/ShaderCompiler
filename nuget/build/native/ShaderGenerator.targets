@@ -10,21 +10,21 @@
     <ShaderGeneratorPath>$(MSBuildThisFileDirectory)..\..\bin\ShaderGenerator.exe</ShaderGeneratorPath>
   </PropertyGroup>
 
-  <Target Name="BuildShaderGroups"
-          BeforeTargets="ClCompile"
-          Inputs="@(ShaderGroup)"
-          Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
-    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols)"/>
+  <Target Name="BuildShaderGroups" BeforeTargets="ClCompile" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
+    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols) %(ShaderGroup.AdditionalArguments)" />
+
+    <CreateItem Include="$(OutDir)%(ShaderGroup.Filename).csg" AdditionalMetadata="DeploymentContent=true">
+      <Output TaskParameter="Include" ItemName="CustomBuild" />
+    </CreateItem>
+
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.Identity);$(OutDir)@(ShaderGroup.Filename->Replace('/', '\')).csg" Encoding="Unicode" Overwrite="true" />
   </Target>
-  <Target Name="GenerateShaderGroupHeaders"
-          BeforeTargets="ClCompile"
-          Inputs="@(ShaderGroup)"
-          Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
-    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace)"/>
+  <Target Name="GenerateShaderGroupHeaders" BeforeTargets="ClCompile" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
+    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace) %(ShaderGroup.AdditionalArguments)" />
   </Target>
 
   <Target Name="CleanOutput" AfterTargets="Clean">
-    <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')"/>
-    <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')"/>
+    <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')" />
+    <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')" />
   </Target>
 </Project>

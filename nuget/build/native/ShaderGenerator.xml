@@ -1,78 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ProjectSchemaDefinitions 
-  xmlns="http://schemas.microsoft.com/build/2009/properties"   
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"   
-  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+<ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
   <ItemType Name="ShaderGroup" DisplayName="HLSL Shader Group" />
-  <ContentType Name="ShaderGroup" ItemType="ShaderGroup" DisplayName="HLSL Shader Group"/>
-  <FileExtension Name=".hlslg" ContentType="ShaderGroup"/>
+  <ContentType Name="ShaderGroup" ItemType="ShaderGroup" DisplayName="HLSL Shader Group" />
+  <FileExtension Name=".hlslg" ContentType="ShaderGroup" />
 
-  <Rule
-    Name="ShaderGenerator"
-    PageTemplate="tool"
-    DisplayName="Shader Generator"
-    SwitchPrefix="-"
-    Order="20">
+  <Rule Name="ShaderGenerator" PageTemplate="tool" DisplayName="Shader Generator" SwitchPrefix="-" Order="20">
 
     <Rule.Categories>
-      <Category
-        Name="General"
-        DisplayName="General" />
+      <Category Name="General" DisplayName="General" />
     </Rule.Categories>
 
     <Rule.DataSource>
-      <DataSource
-        Persistence="ProjectFile"
-        ItemType="ShaderGroup"
-        Label=""
-        HasConfigurationCondition="true" />
+      <DataSource Persistence="ProjectFile" ItemType="ShaderGroup" Label="" HasConfigurationCondition="true" />
     </Rule.DataSource>
 
-    <StringProperty
-      Name="HeaderNamespace"
-      DisplayName="Header namespace"
-      Description="The namespace used in the generated header files."
-      Category="General"
-      Switch="ns"
-      Separator="="/>
+    <StringProperty Name="HeaderNamespace" DisplayName="Header namespace" Description="The namespace used in the generated header files." Category="General" Switch="ns" Separator="=" />
 
-    <BoolProperty
-      Name="IsEmittingDebugSymbols"
-      DisplayName="Emit debug symbols"
-      Description="Embed debug information in the output."
-      Switch="d"/>
+    <BoolProperty Name="IsEmittingDebugSymbols" DisplayName="Emit debug symbols" Description="Embed debug information in the output." Switch="d" />
 
-    <EnumProperty
-     Name="OptimizationLevel"
-     DisplayName="Optimization"
-     Description="Selects how much the shader code should be optimized."
-     Category="General">
-      <EnumValue
-        Name="0"
-        Switch="p=0"
-        DisplayName="Disabled"
-        Description="Directs the compiler to use the lowest optimization level. If you set this constant, the compiler might produce slower code but produces the code more quickly. Set this constant when you develop the shader iteratively.">
-      </EnumValue>
-      <EnumValue
-        Name="1"
-        Switch="p=1"
-        DisplayName="Minimal"
-        Description="Directs the compiler to use the second lowest optimization level.">
-      </EnumValue>
-      <EnumValue
-        Name="2"
-        Switch="p=2"
-        DisplayName="Good"
-        Description="Directs the compiler to use the second highest optimization level.">
-      </EnumValue>
-      <EnumValue
-        Name="3"
-        Switch="p=3"
-        DisplayName="Best"
-        Description="Directs the compiler to use the highest optimization level. If you set this constant, the compiler produces the best possible code but might take significantly longer to do so. Set this constant for final builds of an application when performance is the most important factor.">
-      </EnumValue>
+    <EnumProperty Name="OptimizationLevel" DisplayName="Optimization" Description="Selects how much the shader code should be optimized." Category="General">
+      <EnumValue Name="0" Switch="p=0" DisplayName="Disabled" Description="Directs the compiler to use the lowest optimization level. If you set this constant, the compiler might produce slower code but produces the code more quickly. Set this constant when you develop the shader iteratively."></EnumValue>
+      <EnumValue Name="1" Switch="p=1" DisplayName="Minimal" Description="Directs the compiler to use the second lowest optimization level."></EnumValue>
+      <EnumValue Name="2" Switch="p=2" DisplayName="Good" Description="Directs the compiler to use the second highest optimization level."></EnumValue>
+      <EnumValue Name="3" Switch="p=3" DisplayName="Best" Description="Directs the compiler to use the highest optimization level. If you set this constant, the compiler produces the best possible code but might take significantly longer to do so. Set this constant for final builds of an application when performance is the most important factor."></EnumValue>
     </EnumProperty>
-    
+
+    <StringProperty Name="AdditionalArguments" DisplayName="Additional command line arguments" Description="Specify additional command line arguments here." Category="General" />
   </Rule>
 </ProjectSchemaDefinitions>

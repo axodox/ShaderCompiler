@@ -21,7 +21,8 @@ int main(int argc, char* argv[])
     printf("  -h=<dir_path>: Path of the include header\n");
     printf("  -n=<namespace>: Header namespace name\n");
     printf("  -p=0..4: Optimization level\n");
-    printf("  -d: Emit debug symbols\n");        
+    printf("  -d: Emit debug symbols\n");
+    printf("  -t: Test mode - waits for debugger\n");
     printf("\n");
 
     printf("Source file usage:\n");
@@ -39,6 +40,16 @@ int main(int argc, char* argv[])
     init_apartment();
     
     auto arguments = ShaderCompilationArguments::Parse(argc, argv);
+    if (arguments.WaitForDebugger)
+    {
+      while (!IsDebuggerPresent())
+      {
+        Sleep(1000);
+      }
+
+      DebugBreak();
+    }
+
     auto shader = ShaderInfo::FromFile(arguments.Input);
 
     if (!arguments.Header.empty())

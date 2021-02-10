@@ -9,6 +9,7 @@ namespace ShaderGenerator
     bool IsDebug = false;
     int OptimizationLevel = 2;
     std::string NamespaceName;
+    bool WaitForDebugger = false;
 
     static ShaderCompilationArguments Parse(int argc, char* argv[]);
   };
