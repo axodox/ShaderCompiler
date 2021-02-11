@@ -209,6 +209,9 @@ namespace ShaderGenerator
     else if (!arguments.NamespaceName.empty()) namespaceName = arguments.NamespaceName;
     else namespaceName = "ShaderGenerator";
 
+    static regex namespaceRegex{"\\."};
+    namespaceName = regex_replace(namespaceName, namespaceRegex, "::");
+
     printf("Generating header for shader group %s at namespace %s...\n", shader.Path.string().c_str(), namespaceName.c_str());
     auto header = shader.GenerateHeader(namespaceName);
 
