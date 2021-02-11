@@ -17,7 +17,8 @@
       <Output TaskParameter="Include" ItemName="CustomBuild" />
     </CreateItem>
 
-    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.Identity);$(OutDir)@(ShaderGroup.Filename->Replace('/', '\')).csg" Encoding="Unicode" Overwrite="true" />
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(OutDir)%(ShaderGroup.Filename).csg" Encoding="Unicode" Overwrite="true" />
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath)" Encoding="Unicode" Overwrite="true" />
   </Target>
   <Target Name="GenerateShaderGroupHeaders" BeforeTargets="ClCompile" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
     <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace) %(ShaderGroup.AdditionalArguments)" />
