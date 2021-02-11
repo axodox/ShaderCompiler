@@ -3,7 +3,7 @@
 
   <ItemGroup>
     <AvailableItemName Include="ShaderGroup">
-      <Targets>BuildShaderGroups;GenerateShaderGroupHeaders;CleanOutput</Targets>
+      <Targets>BuildShaderGroups;GenerateShaderGroupHeaders;MakeShaderGroupsDeployable;CleanShaderGeneratorOutput</Targets>
     </AvailableItemName>
   </ItemGroup>
 
@@ -21,10 +21,6 @@
     </PropertyGroup>
    
     <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols) %(ShaderGroup.AdditionalArguments)" />
-
-    <CreateItem Include="$(OutDir)%(ShaderGroup.Filename).csg" AdditionalMetadata="DeploymentContent=true">
-      <Output TaskParameter="Include" ItemName="CustomBuild" />
-    </CreateItem>
 
     <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(OutDir)%(ShaderGroup.Filename).csg" Encoding="Unicode" Overwrite="true" />
     <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="true" />
@@ -45,7 +41,13 @@
     <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="true" />
   </Target>
 
-  <Target Name="CleanOutput" AfterTargets="Clean">
+  <Target Name="MakeShaderGroupsDeployable" BeforeTargets="Midl" AfterTargets="BuildShaderGroups">
+    <CreateItem Include="$(OutDir)*.csg" AdditionalMetadata="DeploymentContent=true">
+      <Output TaskParameter="Include" ItemName="CustomBuild" />
+    </CreateItem>
+  </Target>
+
+  <Target Name="CleanShaderGeneratorOutput" AfterTargets="Clean">
     <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')" />
     <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')" />
   </Target>
