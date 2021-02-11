@@ -49,5 +49,5 @@
     <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')" />
     <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')" />
   </Target>
-  
+
 </Project>
