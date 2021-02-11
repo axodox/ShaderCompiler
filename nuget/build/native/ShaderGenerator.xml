@@ -27,5 +27,7 @@
     </EnumProperty>
 
     <StringProperty Name="AdditionalArguments" DisplayName="Additional command line arguments" Description="Specify additional command line arguments here." Category="General" />
+
   </Rule>
+  
 </ProjectSchemaDefinitions>
