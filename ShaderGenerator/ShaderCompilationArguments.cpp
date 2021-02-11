@@ -32,7 +32,7 @@ namespace ShaderGenerator
         }
         else if (match[1] == "d")
         {
-          if (!match[2].matched && match[2] == "true")
+          if (match[2].matched && match[2] == "true")
           {
             result.IsDebug = true;
           }

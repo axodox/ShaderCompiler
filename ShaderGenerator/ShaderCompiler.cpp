@@ -48,7 +48,7 @@ namespace ShaderGenerator
       vector<D3D_SHADER_MACRO> macros;
       for (auto& define : permutation->Defines)
       {
-        macros.push_back({ define.first.c_str(), define.second.c_str() });
+        macros.push_back({ define.c_str(), "1" });
       }
       macros.push_back({ nullptr, nullptr });
 

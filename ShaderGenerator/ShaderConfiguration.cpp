@@ -162,6 +162,7 @@ namespace ShaderGenerator
     {
       //Emit result
       OptionPermutation value{};
+      size_t offset = 0;
       for (size_t i = 0; i < options.size(); i++)
       {
         auto& option = options[i];
@@ -169,10 +170,11 @@ namespace ShaderGenerator
         string definedValue;
         if (option->TryGetDefinedValue(indices[i], definedValue))
         {
-          value.Defines.push_back({ option->Name, definedValue });
+          value.Defines.push_back({ option->Name + definedValue });
         }
 
-        value.Key = (value.Key << option->KeyLength()) + indices[i];
+        value.Key |= indices[i] << offset;
+        offset += option->KeyLength();
       }
       results.push_back(value);
 

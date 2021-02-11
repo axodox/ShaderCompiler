@@ -12,7 +12,7 @@ namespace ShaderGenerator
 
   struct OptionPermutation
   {
-    std::vector<std::pair<std::string, std::string>> Defines;
+    std::vector<std::string> Defines;
     uint64_t Key;
   };
 
