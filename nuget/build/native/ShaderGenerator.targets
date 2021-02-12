@@ -3,13 +3,18 @@
 
   <ItemGroup>
     <AvailableItemName Include="ShaderGroup">
-      <Targets>BuildShaderGroups;GenerateShaderGroupHeaders;MakeShaderGroupsDeployable;CleanShaderGeneratorOutput</Targets>
+      <Targets>BuildShaderGroups;GenerateShaderGroupHeaders;MakeShaderGroupsDeployable;CleanShaderGeneratorOutput;CleanShaderGeneratorTrackingLogs</Targets>
     </AvailableItemName>
   </ItemGroup>
 
   <PropertyGroup>
     <ShaderGeneratorPath>$(MSBuildThisFileDirectory)..\..\bin\ShaderGenerator.exe</ShaderGeneratorPath>
   </PropertyGroup>
+
+  <Target Name="CleanShaderGeneratorTrackingLogs" BeforeTargets="BuildShaderGroups;GenerateShaderGroupHeaders">
+    <Delete Files="$(TLogLocation)BuildShaderGroups.write.1u.tlog;$(TLogLocation)BuildShaderGroups.read.1u.tlog" />
+    <Delete Files="$(TLogLocation)GenerateShaderGroupHeaders.write.1u.tlog;$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" />
+   </Target>
 
   <Target Name="BuildShaderGroups" BeforeTargets="Midl" AfterTargets="CustomBuild" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
     <ItemGroup>
@@ -22,8 +27,8 @@
    
     <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols) %(ShaderGroup.AdditionalArguments)" />
 
-    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(OutDir)%(ShaderGroup.Filename).csg" Encoding="Unicode" Overwrite="true" />
-    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="true" />
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(OutDir)%(ShaderGroup.Filename).csg" Encoding="Unicode" Overwrite="false" />
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="false" />
   </Target>
 
   <Target Name="GenerateShaderGroupHeaders" BeforeTargets="ClCompile" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
@@ -37,8 +42,8 @@
     
     <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace) %(ShaderGroup.AdditionalArguments)" />
     
-    <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(IntDir)ShaderGenerator\%(ShaderGroup.Filename).h" Encoding="Unicode" Overwrite="true" />
-    <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="true" />
+    <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(IntDir)ShaderGenerator\%(ShaderGroup.Filename).h" Encoding="Unicode" Overwrite="false" />
+    <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="false" />
   </Target>
 
   <Target Name="MakeShaderGroupsDeployable" BeforeTargets="Midl" AfterTargets="BuildShaderGroups">
