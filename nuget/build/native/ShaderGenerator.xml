@@ -17,9 +17,10 @@
 
     <StringProperty Name="HeaderNamespace" DisplayName="Header namespace" Description="The namespace used in the generated header files." Category="General" Switch="ns" Separator="=" />
 
-    <BoolProperty Name="IsEmittingDebugSymbols" DisplayName="Emit debug symbols" Description="Embed debug information in the output." Switch="d" />
+    <BoolProperty Name="IsEmittingDebugSymbols" DisplayName="Emit debug symbols" Description="Directs the compiler to insert debug file/line/type/symbol information into the output code." Switch="d" />
 
     <EnumProperty Name="OptimizationLevel" DisplayName="Optimization" Description="Selects how much the shader code should be optimized." Category="General">
+      <EnumValue Name="-1" Switch="p=-1" DisplayName="Skip" Description="Directs the compiler to skip optimization steps during code generation. We recommend that you set this constant for debug purposes only."></EnumValue>
       <EnumValue Name="0" Switch="p=0" DisplayName="Disabled" Description="Directs the compiler to use the lowest optimization level. If you set this constant, the compiler might produce slower code but produces the code more quickly. Set this constant when you develop the shader iteratively."></EnumValue>
       <EnumValue Name="1" Switch="p=1" DisplayName="Minimal" Description="Directs the compiler to use the second lowest optimization level."></EnumValue>
       <EnumValue Name="2" Switch="p=2" DisplayName="Good" Description="Directs the compiler to use the second highest optimization level."></EnumValue>
