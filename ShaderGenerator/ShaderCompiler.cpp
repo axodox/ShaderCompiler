@@ -53,9 +53,16 @@ namespace ShaderGenerator
       macros.push_back({ nullptr, nullptr });
 
       auto flags = 0u;
-      if (context.Options->IsDebug) flags |= D3DCOMPILE_DEBUG;
+      if (context.Options->IsDebug)
+      {
+        flags |= D3DCOMPILE_DEBUG;
+      }
+
       switch (context.Options->OptimizationLevel)
       {
+      case -1:
+        flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+        break;
       case 0:
         flags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;
         break;

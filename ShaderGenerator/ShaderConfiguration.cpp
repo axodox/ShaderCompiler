@@ -8,7 +8,7 @@ namespace ShaderGenerator
   std::unique_ptr<ShaderOption> ParseOption(const std::string& text)
   {
     static regex boolRegex("bool\\s+(\\w*)\\s*");
-    static regex enumRegex("enum\\s+(\\w*)\\s+\\{((\\w+\\s*,\\s*)*\\w+\\s*)\\}\\s*");
+    static regex enumRegex("enum\\s+(\\w*)\\s+\\{\\s*((\\w+\\s*,\\s*)*\\w+)\\s*\\}\\s*");
     static regex intRegex("int\\s+(\\w*)\\s+\\{(\\d+)\\.\\.(\\d+)\\}\\s*");
 
     smatch match;
