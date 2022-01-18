@@ -28,6 +28,12 @@ namespace ShaderGenerator
     }
   };
 
+  struct ShaderDebugName
+  {
+    uint16_t Flags;
+    uint16_t NameLength;
+  };
+
   DWORD WINAPI CompileWorker(LPVOID contextPtr)
   {
     ShaderCompilationContext& context = *((ShaderCompilationContext*)contextPtr);
@@ -44,6 +50,10 @@ namespace ShaderGenerator
         context.Input.pop();
       }
 
+      //Define result
+      CompiledShader result{};
+      result.Key = permutation->Key;
+
       //Define macros
       vector<D3D_SHADER_MACRO> macros;
       for (auto& define : permutation->Defines)
@@ -52,11 +62,8 @@ namespace ShaderGenerator
       }
       macros.push_back({ nullptr, nullptr });
 
-      auto flags = 0u;
-      if (context.Options->IsDebug)
-      {
-        flags |= D3DCOMPILE_DEBUG;
-      }
+      //Define compilation flags
+      auto flags = D3DCOMPILE_DEBUG | D3DCOMPILE_DEBUG_NAME_FOR_BINARY;
 
       switch (context.Options->OptimizationLevel)
       {
@@ -79,7 +86,7 @@ namespace ShaderGenerator
 
       //Run compilation
       com_ptr<ID3DBlob> binary, errors;
-      auto result = D3DCompileFromFile(
+      auto success = SUCCEEDED(D3DCompileFromFile(
         context.Shader->Path.c_str(),
         macros.data(),
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -88,7 +95,36 @@ namespace ShaderGenerator
         flags,
         0u,
         binary.put(),
-        errors.put());
+        errors.put()));
+
+      //Post process results
+      if (success)
+      {
+        //Get debug information
+        {
+          com_ptr<ID3DBlob> pdb;
+          D3DGetBlobPart(binary->GetBufferPointer(), binary->GetBufferSize(), D3D_BLOB_PDB, 0, pdb.put());
+
+          com_ptr<ID3DBlob> pdbName;
+          D3DGetBlobPart(binary->GetBufferPointer(), binary->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, pdbName.put());
+
+          if (pdb && pdbName)
+          {
+            auto pDebugNameData = reinterpret_cast<const ShaderDebugName*>(pdbName->GetBufferPointer());
+            auto fileName = reinterpret_cast<const char*>(pDebugNameData + 1);
+
+            result.PdbName = fileName;
+            result.PdbData.resize(pdb->GetBufferSize());
+            memcpy(result.PdbData.data(), pdb->GetBufferPointer(), pdb->GetBufferSize());
+          }
+        }
+
+        //Save binary
+        {
+          result.Data.resize(binary->GetBufferSize());
+          memcpy(result.Data.data(), binary->GetBufferPointer(), binary->GetBufferSize());
+        }
+      }
 
       //Print out messages
       stringstream messages{ (char*)errors->GetBufferPointer() };
@@ -106,13 +142,10 @@ namespace ShaderGenerator
       }
 
       //If successful return binary
-      if (SUCCEEDED(result))
+      if (success)
       {
-        vector<uint8_t> data(binary->GetBufferSize());
-        memcpy(data.data(), binary->GetBufferPointer(), binary->GetBufferSize());
-
         lock_guard<mutex> lock(context.OutputMutex);        
-        context.Output.push_back({ permutation->Key, move(data) });
+        context.Output.push_back(move(result));
       }
       else
       {
