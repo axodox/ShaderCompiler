@@ -7,6 +7,7 @@ namespace ShaderGenerator
   {
     std::filesystem::path Input, Output, Header;
     bool IsDebug = false;
+    bool UseExternalDebugSymbols = false;
     int OptimizationLevel = 2;
     std::string NamespaceName;
     bool WaitForDebugger = false;

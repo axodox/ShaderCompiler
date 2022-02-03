@@ -66,9 +66,14 @@ namespace ShaderGenerator
     //Write debug info
     if (hasDebugInfo)
     {
+      auto pdbRoot = path.parent_path() / "ShaderPdb";
+
+      //Ensure output directory
+      filesystem::create_directory(pdbRoot, ec);
+
       for (auto& shader : compiledShaders)
       {
-        WriteAllBytes(root / shader.PdbName, shader.PdbData);
+        WriteAllBytes(pdbRoot / shader.PdbName, shader.PdbData);
       }
     }
   }

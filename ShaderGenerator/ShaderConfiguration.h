@@ -12,7 +12,7 @@ namespace ShaderGenerator
 
   struct OptionPermutation
   {
-    std::vector<std::string> Defines;
+    std::vector<std::pair<std::string, std::string>> Defines;
     uint64_t Key;
   };
 
@@ -29,6 +29,8 @@ namespace ShaderGenerator
     virtual OptionType Type() const = 0;
 
     virtual size_t ValueCount() const = 0;
+
+    virtual bool IsValueDefinedExplicitly() const = 0;
 
     virtual bool TryGetDefinedValue(size_t index, std::string& value) const = 0;
 
@@ -47,6 +49,11 @@ namespace ShaderGenerator
     virtual size_t ValueCount() const override
     {
       return 2;
+    }
+
+    virtual bool IsValueDefinedExplicitly() const override
+    {
+      return false;
     }
 
     virtual bool TryGetDefinedValue(size_t index, std::string& value) const override
@@ -68,6 +75,11 @@ namespace ShaderGenerator
     virtual size_t ValueCount() const override
     {
       return Values.size();
+    }
+
+    virtual bool IsValueDefinedExplicitly() const override
+    {
+      return true;
     }
 
     virtual bool TryGetDefinedValue(size_t index, std::string& value) const override
@@ -97,6 +109,11 @@ namespace ShaderGenerator
     virtual size_t ValueCount() const override
     {
       return size_t(Maximum - Minimum) + 1;
+    }
+
+    virtual bool IsValueDefinedExplicitly() const override
+    {
+      return true;
     }
 
     virtual bool TryGetDefinedValue(size_t index, std::string& value) const override

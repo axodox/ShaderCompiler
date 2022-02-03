@@ -37,6 +37,13 @@ namespace ShaderGenerator
             result.IsDebug = true;
           }
         }
+        else if (match[1] == "x")
+        {
+          if (match[2].matched && match[2] == "true")
+          {
+            result.UseExternalDebugSymbols = true;
+          }
+        }
         else if (match[1] == "p")
         {
           result.OptimizationLevel = stoi(match[2]);

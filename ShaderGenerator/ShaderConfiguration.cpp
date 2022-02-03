@@ -9,7 +9,7 @@ namespace ShaderGenerator
   {
     static regex boolRegex("bool\\s+(\\w*)\\s*");
     static regex enumRegex("enum\\s+(\\w*)\\s+\\{\\s*((\\w+\\s*,\\s*)*\\w+)\\s*\\}\\s*");
-    static regex intRegex("int\\s+(\\w*)\\s+\\{(\\d+)\\.\\.(\\d+)\\}\\s*");
+    static regex intRegex("int\\s+(\\w*)\\s+\\{\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\}\\s*");
 
     smatch match;
     if (regex_match(text, match, boolRegex))
@@ -120,7 +120,7 @@ namespace ShaderGenerator
       case OptionType::Enumeration:
       {
         auto enumerationOption = static_cast<const EnumerationOption*>(option.get());
-        for (auto i = 0; i < enumerationOption->Values.size(); i++)
+        for (auto i = 0u; i < enumerationOption->Values.size(); i++)
         {
           text << "    " << option->Name.c_str() << enumerationOption->Values[i].c_str() << " = " << (i << offset) << ",\n";
         }
@@ -170,7 +170,12 @@ namespace ShaderGenerator
         string definedValue;
         if (option->TryGetDefinedValue(indices[i], definedValue))
         {
-          value.Defines.push_back({ option->Name + definedValue });
+          value.Defines.push_back({ option->Name + definedValue, "1"});
+
+          if (option->IsValueDefinedExplicitly())
+          {
+            value.Defines.push_back({ option->Name, definedValue });
+          }
         }
 
         value.Key |= indices[i] << offset;

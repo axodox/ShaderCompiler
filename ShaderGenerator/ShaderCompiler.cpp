@@ -58,12 +58,16 @@ namespace ShaderGenerator
       vector<D3D_SHADER_MACRO> macros;
       for (auto& define : permutation->Defines)
       {
-        macros.push_back({ define.c_str(), "1" });
+        macros.push_back({ define.first.c_str(), define.second.c_str() });
       }
       macros.push_back({ nullptr, nullptr });
 
       //Define compilation flags
-      auto flags = D3DCOMPILE_DEBUG | D3DCOMPILE_DEBUG_NAME_FOR_BINARY;
+      auto flags = 0u;
+      if (context.Options->IsDebug)
+      {
+        flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_DEBUG_NAME_FOR_BINARY;
+      }
 
       switch (context.Options->OptimizationLevel)
       {
@@ -101,6 +105,7 @@ namespace ShaderGenerator
       if (success)
       {
         //Get debug information
+        if(context.Options->IsDebug && context.Options->UseExternalDebugSymbols)
         {
           com_ptr<ID3DBlob> pdb;
           D3DGetBlobPart(binary->GetBufferPointer(), binary->GetBufferSize(), D3D_BLOB_PDB, 0, pdb.put());
@@ -117,6 +122,10 @@ namespace ShaderGenerator
             result.PdbData.resize(pdb->GetBufferSize());
             memcpy(result.PdbData.data(), pdb->GetBufferPointer(), pdb->GetBufferSize());
           }
+
+          com_ptr<ID3DBlob> stripped;
+          D3DStripShader(binary->GetBufferPointer(), binary->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, stripped.put());
+          swap(binary, stripped);
         }
 
         //Save binary

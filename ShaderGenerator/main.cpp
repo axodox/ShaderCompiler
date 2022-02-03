@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
     printf("  -n=<namespace>: Header namespace name\n");
     printf("  -p=0..4: Optimization level\n");
     printf("  -d: Emit debug symbols\n");
+    printf("  -x: Strip debug symbols to separate files\n");
     printf("  -t: Test mode - waits for debugger\n");
     printf("\n");
 
