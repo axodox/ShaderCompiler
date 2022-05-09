@@ -17,6 +17,8 @@
       <OptimizationLevel Condition="'%(ShaderGroup.OptimizationLevel)'==''">2</OptimizationLevel>
       <HeaderNamespace Condition="'%(ShaderGroup.HeaderNamespace)'==''">$(ProjectName)::Shaders</HeaderNamespace>
       <AdditionalArguments Condition="'%(ShaderGroup.AdditionalArguments)'==''"></AdditionalArguments>
+      <MinimalRebuildFromTracking Condition="'%(ShaderGroup.MinimalRebuildFromTracking)'==''">true</MinimalRebuildFromTracking>
+      <TrackerLogDirectory Condition="'%(ShaderGroup.TrackerLogDirectory)'==''">$(TLogLocation)</TrackerLogDirectory>
     </ShaderGroup>
   </ItemDefinitionGroup>
 
