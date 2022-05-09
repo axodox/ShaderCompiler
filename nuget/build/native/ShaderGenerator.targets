@@ -16,7 +16,7 @@
     <Delete Files="$(TLogLocation)GenerateShaderGroupHeaders.write.1u.tlog;$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" />
    </Target>
 
-  <Target Name="BuildShaderGroups" BeforeTargets="Midl" AfterTargets="CustomBuild" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
+  <Target Name="BuildShaderGroups" BeforeTargets="ClCompile;MakeShaderGroupsDeployable" Inputs="@(ShaderGroup)" Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg')">
     <ItemGroup>
       <ShaderHeader Include="*.hlsli" />
     </ItemGroup>
@@ -46,11 +46,15 @@
     <WriteLinesToFile File="$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="false" />
   </Target>
 
-  <Target Name="MakeShaderGroupsDeployable" BeforeTargets="Midl" AfterTargets="BuildShaderGroups">
-    <CreateItem Include="$(OutDir)*.csg" AdditionalMetadata="DeploymentContent=true">
-      <Output TaskParameter="Include" ItemName="CustomBuild" />
+  <PropertyGroup>
+    <ContentFilesProjectOutputGroupDependsOn>$(ContentFilesProjectOutputGroupDependsOn);MakeShaderGroupsDeployable;</ContentFilesProjectOutputGroupDependsOn>
+  </PropertyGroup>
+
+  <Target Name="MakeShaderGroupsDeployable" BeforeTargets="ClCompile">
+    <CreateItem Include="@(ShaderGroup->'$(OutDir)%(Filename).csg')" AdditionalMetadata="DeploymentContent=true">
+      <Output TaskParameter="Include" ItemName="None" />
     </CreateItem>
-  </Target>
+  </Target> 
 
   <Target Name="CleanShaderGeneratorOutput" AfterTargets="Clean">
     <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')" />

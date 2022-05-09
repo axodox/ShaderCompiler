@@ -13,10 +13,10 @@
 
   <ItemDefinitionGroup>
     <ShaderGroup>
-      <IsEmittingDebugSymbols>true</IsEmittingDebugSymbols>
-      <OptimizationLevel>2</OptimizationLevel>
-      <HeaderNamespace>$(ProjectName)::Shaders</HeaderNamespace>
-      <AdditionalArguments></AdditionalArguments>
+      <IsEmittingDebugSymbols Condition="'%(ShaderGroup.IsEmittingDebugSymbols)'==''">true</IsEmittingDebugSymbols>
+      <OptimizationLevel Condition="'%(ShaderGroup.OptimizationLevel)'==''">2</OptimizationLevel>
+      <HeaderNamespace Condition="'%(ShaderGroup.HeaderNamespace)'==''">$(ProjectName)::Shaders</HeaderNamespace>
+      <AdditionalArguments Condition="'%(ShaderGroup.AdditionalArguments)'==''"></AdditionalArguments>
     </ShaderGroup>
   </ItemDefinitionGroup>
 
