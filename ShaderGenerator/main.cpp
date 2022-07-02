@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     printf("  #pragma namespace MyApp::Shaders //Namespace for include header\n");
     printf("  #pragma option bool IsSomethingEnabled //A boolean option\n");
     printf("  #pragma option enum RenderMode {X, Y, Z} //An enum option\n");
-    printf("  #pragma option int SampleCount {1..4} //An integer option\n");
+    printf("  #pragma option uint SampleCount {1..4} //An integer option\n");
     return 0;
   }
 

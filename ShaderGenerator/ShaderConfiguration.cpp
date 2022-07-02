@@ -9,7 +9,7 @@ namespace ShaderGenerator
   {
     static regex boolRegex("bool\\s+(\\w*)\\s*");
     static regex enumRegex("enum\\s+(\\w*)\\s+\\{\\s*((\\w+\\s*,\\s*)*\\w+)\\s*\\}\\s*");
-    static regex intRegex("int\\s+(\\w*)\\s+\\{\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\}\\s*");
+    static regex uintRegex("u?int\\s+(\\w*)\\s+\\{\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\}\\s*");
 
     smatch match;
     if (regex_match(text, match, boolRegex))
@@ -40,7 +40,7 @@ namespace ShaderGenerator
 
       return result;
     }
-    else if (regex_match(text, match, intRegex))
+    else if (regex_match(text, match, uintRegex))
     {
       auto result = make_unique<IntegerOption>();
       result->Name = match[1];
@@ -129,7 +129,7 @@ namespace ShaderGenerator
       case OptionType::Integer:
       {
         auto integerOption = static_cast<const IntegerOption*>(option.get());
-        auto range = integerOption->Maximum - integerOption->Minimum;
+        auto range = integerOption->Maximum - integerOption->Minimum + 1;
         for (auto i = 0; i < range; i++)
         {
           text << "    " << option->Name.c_str() << (i + integerOption->Minimum) << " = " << (i << offset) << ",\n";
