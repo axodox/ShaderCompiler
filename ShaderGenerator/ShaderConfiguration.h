@@ -143,6 +143,4 @@ namespace ShaderGenerator
 
     std::string GenerateHeader(const std::string& namespaceName = {}) const;
   };
-
-  void WriteHeader(const ShaderCompilationArguments& path, const ShaderInfo& shader);
 }

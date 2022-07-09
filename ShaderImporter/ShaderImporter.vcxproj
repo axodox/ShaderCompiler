@@ -130,7 +130,7 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ShaderGroup Include="ComputeShader.hlslg" />
+    <ShaderGroup Include="ComputeShader.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="..\nuget\build\native\ShaderGenerator.targets" />

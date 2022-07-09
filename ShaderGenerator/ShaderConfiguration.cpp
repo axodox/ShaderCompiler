@@ -208,38 +208,4 @@ namespace ShaderGenerator
 
     return results;
   }
-
-  void WriteHeader(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)
-  {
-    string namespaceName;
-    if (!shader.Namespace.empty()) namespaceName = shader.Namespace;
-    else if (!arguments.NamespaceName.empty()) namespaceName = arguments.NamespaceName;
-    else namespaceName = "ShaderGenerator";
-
-    static regex namespaceRegex{"\\."};
-    namespaceName = regex_replace(namespaceName, namespaceRegex, "::");
-
-    printf("Generating header for shader group %s at namespace %s...\n", shader.Path.string().c_str(), namespaceName.c_str());
-    auto header = shader.GenerateHeader(namespaceName);
-
-    error_code ec;
-    filesystem::create_directory(arguments.Header.parent_path(), ec);
-    if (ec)
-    {
-      printf("Failed to create output directory at %s.\n", arguments.Header.parent_path().string().c_str());
-    }
-    else
-    {
-      ofstream stream(arguments.Header, ios::out);
-      if (stream.good())
-      {
-        stream << header;
-        printf("Output saved to %s.\n", arguments.Header.string().c_str());
-      }
-      else
-      {
-        printf("Failed to save output to %s.\n", arguments.Header.string().c_str());
-      }
-    }
-  }
 }

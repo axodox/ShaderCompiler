@@ -15,6 +15,6 @@
     <ClInclude Include="ShaderGenerator.h" />
   </ItemGroup>
   <ItemGroup>
-    <ShaderGroup Include="ComputeShader.hlslg" />
+    <ShaderGroup Include="ComputeShader.hlsl" />
   </ItemGroup>
 </Project>

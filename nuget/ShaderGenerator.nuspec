@@ -5,7 +5,7 @@
     <id>ShaderGenerator</id>
 
     <!-- The package version number that is used when resolving dependencies -->
-    <version>1.0.23.0</version>
+    <version>1.0.26.0</version>
 
     <!-- Authors contain text that appears directly on the gallery -->
     <authors>Péter Major</authors>
@@ -31,7 +31,7 @@
 
     <!-- The description can be used in package manager UI. Note that the
              nuget.org gallery uses information you add in the portal. -->
-    <description>Generate multiple shader variants / permutations from HLSL.</description>
+    <description>Avoid writing headers when there is no change.</description>
 
     <!-- Copyright information -->
     <copyright>Copyright ©2021 Péter Major</copyright>

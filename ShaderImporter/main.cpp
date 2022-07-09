@@ -30,7 +30,7 @@ int main()
   
   auto shaderGroup = ShaderGenerator::CompiledShaderGroup::FromFile("D:\\cae\\dev\\ShaderCompiler\\Test\\Output\\ComputeShader.csg");
 
-  auto shaderVariant = shaderGroup.Shader(MyApp::Shaders::ComputeShaderFlags::IS_X);
+  auto shaderVariant = shaderGroup.Shader(ShaderImporter::Shaders::ComputeShaderFlags::BooleanOption);
   com_ptr<ID3D11ComputeShader> shader;
   check_hresult(device->CreateComputeShader(shaderVariant->ByteCode.data(), shaderVariant->ByteCode.size(), nullptr, shader.put()));
 

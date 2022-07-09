@@ -77,4 +77,74 @@ namespace ShaderGenerator
       }
     }
   }
+
+  std::string ReadAllText(const std::filesystem::path& path)
+  {
+    FILE* file = nullptr;
+    _wfopen_s(&file, path.c_str(), L"rb");
+    if (!file) return "";
+
+    fseek(file, 0, SEEK_END);
+    auto length = ftell(file);
+
+    std::string buffer(length, '\0');
+
+    fseek(file, 0, SEEK_SET);
+    fread_s(buffer.data(), length, length, 1, file);
+    fclose(file);
+
+    return buffer;
+  }
+
+  bool WriteAllText(const std::filesystem::path& path, const std::string& text)
+  {
+    FILE* file = nullptr;
+    _wfopen_s(&file, path.c_str(), L"wb");
+    if (!file) return false;
+
+    fwrite(text.data(), 1, text.size(), file);
+    fclose(file);
+
+    return true;
+  }
+
+  void WriteHeader(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)
+  {
+    string namespaceName;
+    if (!shader.Namespace.empty()) namespaceName = shader.Namespace;
+    else if (!arguments.NamespaceName.empty()) namespaceName = arguments.NamespaceName;
+    else namespaceName = "ShaderGenerator";
+
+    static regex namespaceRegex{ "\\." };
+    namespaceName = regex_replace(namespaceName, namespaceRegex, "::");
+
+    printf("Generating header for shader group %s at namespace %s...\n", shader.Path.string().c_str(), namespaceName.c_str());
+    auto header = shader.GenerateHeader(namespaceName);
+
+    error_code ec;
+    filesystem::create_directory(arguments.Header.parent_path(), ec);
+    if (ec)
+    {
+      printf("Failed to create output directory at %s.\n", arguments.Header.parent_path().string().c_str());
+    }
+    else
+    {
+      auto existing = ReadAllText(arguments.Header);
+      if (existing != header)
+      {
+        if (WriteAllText(arguments.Header, header))
+        {
+          printf("Output saved to %s.\n", arguments.Header.string().c_str());
+        }
+        else
+        {
+          printf("Failed to save output to %s.\n", arguments.Header.string().c_str());
+        }
+      }
+      else
+      {
+        printf("Shader header %s is up to date.\n", arguments.Header.string().c_str());
+      }
+    }
+  }
 }
