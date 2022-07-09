@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "ShaderOutputWriter.h"
 
+using namespace winrt;
+using namespace winrt::Windows::Storage;
+using namespace winrt::Windows::Storage::Compression;
+using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
 namespace ShaderGenerator
@@ -15,13 +19,113 @@ namespace ShaderGenerator
   bool WriteAllBytes(const std::filesystem::path& path, const std::vector<uint8_t>& bytes)
   {
     ofstream stream(path, ios::out | ios::binary);
-    
+
     if (stream.good())
     {
       stream.write((const char*)bytes.data(), bytes.size());
     }
 
     return stream.good();
+  }
+
+  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  {
+    bool hasDebugInfo = false;
+
+    try
+    {
+      //Serialize into memory
+      InMemoryRandomAccessStream memoryStream;
+
+      {
+        DataWriter dataWriter{ memoryStream };
+
+        dataWriter.WriteUInt32(uint32_t(compiledShaders.size()));
+        for (auto& shader : compiledShaders)
+        {
+          dataWriter.WriteUInt64(shader.Key);
+          dataWriter.WriteUInt32(uint32_t(shader.Data.size()));
+          dataWriter.WriteBytes(shader.Data);
+          hasDebugInfo |= !shader.PdbName.empty();
+        }
+
+        dataWriter.FlushAsync().get();
+        dataWriter.StoreAsync().get();
+        dataWriter.DetachStream();
+      }
+
+      //Copy data into a buffer
+      auto contentSize = uint32_t(memoryStream.Size());
+
+      Buffer buffer{ contentSize };
+      memoryStream.Seek(0);
+      memoryStream.ReadAsync(buffer, contentSize, InputStreamOptions::None).get();
+
+      //Write output data
+      auto properPath = path;
+      properPath.make_preferred();
+      auto storageFolder = StorageFolder::GetFolderFromPathAsync(properPath.parent_path().c_str()).get();
+      auto storageFile = storageFolder.CreateFileAsync(properPath.filename().c_str(), CreationCollisionOption::ReplaceExisting).get();
+      auto fileStream = storageFile.OpenAsync(FileAccessMode::ReadWrite).get();
+
+      {
+        //Write header
+        DataWriter dataWriter{ fileStream };
+        dataWriter.WriteString(L"CSG2");
+        dataWriter.StoreAsync().get();
+        dataWriter.DetachStream();
+      }
+
+      {
+        //Write compressed data
+        Compressor compressor{ fileStream, CompressAlgorithm::Mszip, 0 };
+        compressor.WriteAsync(buffer).get();
+        compressor.FinishAsync().get();
+        compressor.DetachStream();
+      }
+
+      //Close file
+      fileStream.FlushAsync().get();
+      fileStream.Close();
+
+      wprintf(L"Output saved to %s.\n", path.c_str());
+    }
+    catch (hresult_error& error)
+    {
+      wprintf(L"Failed to save output to %s. Reason: %s\n", path.c_str(), error.message().c_str());
+    }
+
+    return hasDebugInfo;
+  }
+
+  void WriteDebugDatabase(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  {
+    auto pdbRoot = path.parent_path() / "ShaderPdb";
+
+    //Ensure output directory
+    error_code ec;
+    filesystem::create_directory(pdbRoot, ec);
+
+    if (ec)
+    {
+      wprintf(L"Failed to create PDB directory at %s.\n", pdbRoot.c_str());
+    }
+    else
+    {
+      wprintf(L"Writing PDBs to %s...\n", pdbRoot.c_str());
+
+      for (auto& shader : compiledShaders)
+      {
+        if (WriteAllBytes(pdbRoot / shader.PdbName, shader.PdbData))
+        {
+          wprintf(L"PDB saved to %s.\n", path.c_str());
+        }
+        else
+        {
+          wprintf(L"Failed to save PDB to %s.\n", path.c_str());
+        }
+      }
+    }
   }
 
   void WriteShaderOutput(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
@@ -32,7 +136,7 @@ namespace ShaderGenerator
     error_code ec;
     filesystem::create_directory(root, ec);
 
-    //Write shaders
+    //Write shader binary
     auto hasDebugInfo = false;
     if (ec)
     {
@@ -40,41 +144,15 @@ namespace ShaderGenerator
     }
     else
     {
-      wprintf(L"Writing output shaders to %s...", root.c_str());
+      wprintf(L"Writing output shaders to %s...\n", root.c_str());
 
-      ofstream stream(path, ios::out | ios::binary);
-      if (stream.good())
-      {
-        stream << "CSG1";
-        WriteValue(stream, uint32_t(compiledShaders.size()));
-        for (auto& shader : compiledShaders)
-        {
-          WriteValue(stream, shader.Key);
-          WriteValue(stream, uint32_t(shader.Data.size()));
-          stream.write((const char*)shader.Data.data(), shader.Data.size());
-
-          hasDebugInfo |= !shader.PdbName.empty();
-        }
-        wprintf(L"Output saved to %s.\n", path.c_str());
-      }
-      else
-      {
-        printf("Failed to save output to %s.\n", path.string().c_str());
-      }
+      hasDebugInfo = WriteShaderBinary(path, compiledShaders);
     }
 
-    //Write debug info
+    //Write debug database
     if (hasDebugInfo)
     {
-      auto pdbRoot = path.parent_path() / "ShaderPdb";
-
-      //Ensure output directory
-      filesystem::create_directory(pdbRoot, ec);
-
-      for (auto& shader : compiledShaders)
-      {
-        WriteAllBytes(pdbRoot / shader.PdbName, shader.PdbData);
-      }
+      WriteDebugDatabase(path, compiledShaders);
     }
   }
 

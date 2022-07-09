@@ -4,6 +4,13 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <winrt/base.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Storage.Compression.h>
+#include <appmodel.h>
 
 namespace ShaderGenerator
 {
@@ -19,11 +26,30 @@ namespace ShaderGenerator
     std::vector<CompiledShader> _shaders;
     std::unordered_map<uint64_t, CompiledShader*> _shadersByKey;
 
-    template<typename T>
-    static void read(std::ifstream& stream, T& value)
+    template <typename TAsync>
+    static void AwaitOperation(TAsync const& async)
     {
-      static_assert(std::is_trivially_copyable<T>::value);
-      stream.read((char*)&value, sizeof(T));
+      auto event = winrt::handle(CreateEvent(nullptr, true, false, nullptr));
+      async.Completed([&](auto&&...)
+        {
+          SetEvent(event.get());
+        });
+
+      WaitForSingleObject(event.get(), INFINITE);
+    }
+
+    template <typename TAsync>
+    static auto AwaitResults(TAsync const& async)
+    {
+      AwaitOperation(async);
+      return async.GetResults();
+    }
+    
+    static bool IsUwp()
+    {
+      uint32_t length = 0;
+      auto result = GetCurrentPackageFullName(&length, nullptr);
+      return result == APPMODEL_ERROR_NO_PACKAGE ? false : true;
     }
 
   public:
@@ -38,35 +64,87 @@ namespace ShaderGenerator
 
     static CompiledShaderGroup FromFile(const std::filesystem::path& path)
     {
+      using namespace winrt;
+      using namespace winrt::Windows::ApplicationModel;
+      using namespace winrt::Windows::Foundation;
+      using namespace winrt::Windows::Storage;
+      using namespace winrt::Windows::Storage::Compression;
+      using namespace winrt::Windows::Storage::Streams;
+
       std::vector<CompiledShader> shaders;
-      std::ifstream file(path, std::ios::binary);
 
-      if (file.good())
+      try
       {
-        std::string magic{ "    " };
-        file.read(magic.data(), magic.length());
-
-        if (magic != "CSG1")
+        //Read shader data
+        InMemoryRandomAccessStream memoryStream;
         {
-          throw std::exception("Invalid compiled shader group file header.");
+          //Open file
+          auto preferredPath = path;
+          preferredPath.make_preferred();
+                    
+          StorageFile storageFile{nullptr};
+          if (IsUwp())
+          {
+            Uri uri{ L"ms-appx:///" + preferredPath };
+            storageFile = AwaitResults(StorageFile::GetFileFromApplicationUriAsync(uri));
+          }
+          else
+          {
+            storageFile = AwaitResults(StorageFile::GetFileFromPathAsync(preferredPath.c_str()));
+          }
+          
+          auto fileStream = AwaitResults(storageFile.OpenAsync(FileAccessMode::Read));
+
+          //Check header
+          {
+            DataReader dataReader{ fileStream };
+            AwaitOperation(dataReader.LoadAsync(4));
+            auto magic = dataReader.ReadString(4);
+            if (magic != L"CSG2")
+            {
+              throw std::exception("Invalid compiled shader group file header.");
+            }
+            dataReader.DetachStream();
+          }
+
+          //Decompress data
+          {
+            Decompressor decompressor{ fileStream };
+            Buffer buffer{ 1024 * 1024 };
+
+            do
+            {
+              AwaitOperation(decompressor.ReadAsync(buffer, buffer.Capacity(), InputStreamOptions::None));
+              AwaitOperation(memoryStream.WriteAsync(buffer));
+            } while (buffer.Length() > 0);
+
+            decompressor.DetachStream();
+            memoryStream.Seek(0);
+          }
+
+          fileStream.Close();
         }
 
-        uint32_t shaderCount;
-        read(file, shaderCount);
-
-        shaders.resize(shaderCount);
-        for (auto& shader : shaders)
+        //Parse data
         {
-          read(file, shader.Key);
+          DataReader dataReader{ memoryStream };
+          AwaitOperation(dataReader.LoadAsync(uint32_t(memoryStream.Size())));
 
-          uint32_t size;
-          read(file, size);
+          auto shaderCount = dataReader.ReadUInt32();
 
-          shader.ByteCode.resize(size);
-          file.read((char*)shader.ByteCode.data(), shader.ByteCode.size());
+          shaders.resize(shaderCount);
+          for (auto& shader : shaders)
+          {
+            shader.Key = dataReader.ReadUInt64();
+
+            auto size = dataReader.ReadUInt32();
+            shader.ByteCode.resize(size);
+
+            dataReader.ReadBytes(shader.ByteCode);
+          }
         }
       }
-      else
+      catch (...)
       {
         throw std::exception("Failed to open compiled shader group file.");
       }

@@ -9,6 +9,10 @@
 #include <unordered_set>
 
 #include <winrt/base.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Storage.Compression.h>
 
 #include <d3dcompiler.h>
 #pragma comment (lib, "D3DCompiler.lib")
