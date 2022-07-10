@@ -93,11 +93,17 @@
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
+    <ShaderGroup>
+      <OptimizationLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">0</OptimizationLevel>
+    </ShaderGroup>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <ClCompile>
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ShaderGroup>
+      <OptimizationLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">0</OptimizationLevel>
+    </ShaderGroup>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>

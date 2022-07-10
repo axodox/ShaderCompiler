@@ -140,11 +140,11 @@ namespace ShaderGenerator
       string message;
       static regex warningIgnoreRegex(".*: warning X3568: '(target|namespace|entry|option)' : unknown pragma ignored");
       {
-        lock_guard<mutex> lock(context.MessagesMutex);
         while (getline(messages, message, '\n'))
         {
           if (!regex_match(message, warningIgnoreRegex) && context.Messages.emplace(message).second)
           {
+            lock_guard<mutex> lock(context.MessagesMutex);
             printf("%s\n", message.c_str());
           }
         }

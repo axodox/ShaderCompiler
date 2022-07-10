@@ -28,7 +28,7 @@ int main()
     nullptr,
     context.put()));
   
-  auto shaderGroup = ShaderGenerator::CompiledShaderGroup::FromFile("G:\\cae\\dev\\ShaderCompiler\\ShaderImporter\\bin\\Release\\x64\\ComputeShader.csg");
+  auto shaderGroup = ShaderGenerator::CompiledShaderGroup::FromFile("G:\\cae\\dev\\ShaderCompiler\\ShaderImporter\\bin\\Debug\\x64\\ComputeShader.csg");
 
   auto shaderVariant = shaderGroup.Shader(ShaderImporter::Shaders::ComputeShaderFlags::BooleanOption);
   com_ptr<ID3D11ComputeShader> shader;

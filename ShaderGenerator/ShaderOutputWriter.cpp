@@ -28,38 +28,113 @@ namespace ShaderGenerator
     return stream.good();
   }
 
+  struct CompressionBlock
+  {
+    Buffer Data{ nullptr };
+    vector<uint64_t> Components;
+  };
+
+  struct CompressionContext
+  {
+    std::mutex Mutex;
+    queue<const CompiledShader*> Shaders;
+    list<CompressionBlock> Results;
+  };
+
+  DWORD WINAPI CompressWorker(LPVOID contextPointer)
+  {
+    //Prepare workset
+    auto context = static_cast<CompressionContext*>(contextPointer);    
+    vector<uint64_t> components;
+    InMemoryRandomAccessStream compressedStream;
+    Compressor compressor{ compressedStream, CompressAlgorithm::Lzms, 64 * 1024 * 1024 };
+
+    //Add shaders
+    const CompiledShader* shader;
+    do
+    {
+      //Get next shader
+      shader = nullptr;
+      {
+        lock_guard lock(context->Mutex);
+        if (!context->Shaders.empty())
+        {
+          shader = context->Shaders.front();
+          context->Shaders.pop();
+        }
+      }
+      if (!shader) continue;
+
+      //Serialize shader
+      InMemoryRandomAccessStream uncompressedStream;
+      {
+        DataWriter dataWriter{ uncompressedStream };
+        dataWriter.WriteString(L"SH01");
+        dataWriter.WriteUInt64(shader->Key);
+        dataWriter.WriteUInt32(uint32_t(shader->Data.size()));
+        dataWriter.WriteBytes(shader->Data);
+        dataWriter.StoreAsync().get();
+        dataWriter.FlushAsync().get();
+        dataWriter.DetachStream();
+      }
+
+      //Copy data into a buffer
+      auto contentSize = uint32_t(uncompressedStream.Size());
+
+      Buffer buffer{ contentSize };
+      uncompressedStream.Seek(0);
+      uncompressedStream.ReadAsync(buffer, contentSize, InputStreamOptions::None).get();
+
+      //Write compressed data
+      compressor.WriteAsync(buffer).get();
+      components.push_back(shader->Key);
+    } while (shader);
+
+    //Finish compression
+    compressor.FlushAsync().get();
+    compressor.FinishAsync().get();
+    compressor.DetachStream();
+
+    //Save results
+    auto blockSize = uint32_t(compressedStream.Size());
+
+    CompressionBlock block;
+    block.Data = Buffer{ blockSize };
+    block.Components = move(components);
+
+    compressedStream.Seek(0);
+    compressedStream.ReadAsync(block.Data, blockSize, InputStreamOptions::None).get();
+
+    {
+      lock_guard lock(context->Mutex);
+      context->Results.push_back(move(block));
+    }
+
+    return 0;
+  }
+
   bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
   {
     bool hasDebugInfo = false;
 
     try
     {
-      //Serialize into memory
-      InMemoryRandomAccessStream memoryStream;
-
+      //Define compression context
+      CompressionContext context;
+      for (auto& shader : compiledShaders)
       {
-        DataWriter dataWriter{ memoryStream };
-
-        dataWriter.WriteUInt32(uint32_t(compiledShaders.size()));
-        for (auto& shader : compiledShaders)
-        {
-          dataWriter.WriteUInt64(shader.Key);
-          dataWriter.WriteUInt32(uint32_t(shader.Data.size()));
-          dataWriter.WriteBytes(shader.Data);
-          hasDebugInfo |= !shader.PdbName.empty();
-        }
-
-        dataWriter.FlushAsync().get();
-        dataWriter.StoreAsync().get();
-        dataWriter.DetachStream();
+        context.Shaders.push(&shader);
       }
 
-      //Copy data into a buffer
-      auto contentSize = uint32_t(memoryStream.Size());
+      //Run compression threads
+      auto threadCount = thread::hardware_concurrency();
+      vector<HANDLE> threads(threadCount);
+      for (auto& thread : threads)
+      {
+        thread = CreateThread(nullptr, 0, &CompressWorker, &context, 0, nullptr);
+      }
 
-      Buffer buffer{ contentSize };
-      memoryStream.Seek(0);
-      memoryStream.ReadAsync(buffer, contentSize, InputStreamOptions::None).get();
+      WaitForMultipleObjects(DWORD(threads.size()), threads.data(), true, INFINITE);
 
       //Write output data
       auto properPath = path;
@@ -67,22 +142,24 @@ namespace ShaderGenerator
       auto storageFolder = StorageFolder::GetFolderFromPathAsync(properPath.parent_path().c_str()).get();
       auto storageFile = storageFolder.CreateFileAsync(properPath.filename().c_str(), CreationCollisionOption::ReplaceExisting).get();
       auto fileStream = storageFile.OpenAsync(FileAccessMode::ReadWrite).get();
+      
+      DataWriter dataWriter{ fileStream };
+      dataWriter.WriteString(L"CSG2");      
+      dataWriter.WriteUInt32(uint32_t(context.Results.size()));
 
+      for (auto& block : context.Results)
       {
-        //Write header
-        DataWriter dataWriter{ fileStream };
-        dataWriter.WriteString(L"CSG2");
-        dataWriter.StoreAsync().get();
-        dataWriter.DetachStream();
+        dataWriter.WriteUInt32(uint32_t(block.Components.size()));
+        /*for (auto key : block.Components)
+        {
+          dataWriter.WriteUInt64(key);
+        }*/
+        dataWriter.WriteBuffer(block.Data);
       }
 
-      {
-        //Write compressed data
-        Compressor compressor{ fileStream, CompressAlgorithm::Mszip, 0 };
-        compressor.WriteAsync(buffer).get();
-        compressor.FinishAsync().get();
-        compressor.DetachStream();
-      }
+      dataWriter.StoreAsync().get();
+      dataWriter.FlushAsync().get();
+      dataWriter.DetachStream();
 
       //Close file
       fileStream.FlushAsync().get();

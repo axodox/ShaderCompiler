@@ -77,6 +77,7 @@ namespace ShaderGenerator
       {
         //Read shader data
         InMemoryRandomAccessStream memoryStream;
+        uint32_t shaderCount = 0;
         {
           //Open file
           auto preferredPath = path;
@@ -94,34 +95,37 @@ namespace ShaderGenerator
           }
           
           auto fileStream = AwaitResults(storageFile.OpenAsync(FileAccessMode::Read));
+          DataReader dataReader{ fileStream };
 
           //Check header
+          AwaitOperation(dataReader.LoadAsync(4));
+          auto magic = dataReader.ReadString(4);
+          if (magic != L"CSG2")
           {
-            DataReader dataReader{ fileStream };
-            AwaitOperation(dataReader.LoadAsync(4));
-            auto magic = dataReader.ReadString(4);
-            if (magic != L"CSG2")
-            {
-              throw std::exception("Invalid compiled shader group file header.");
-            }
-            dataReader.DetachStream();
+            throw std::exception("Invalid compiled shader group file header.");
           }
 
-          //Decompress data
+          //Decompress blocks
+          AwaitOperation(dataReader.LoadAsync(4));
+          auto blockCount = dataReader.ReadUInt32();
+          
+          Buffer buffer{ 1024 * 1024 };
+          for (auto i = 0u; i < blockCount; i++)
           {
+            AwaitOperation(dataReader.LoadAsync(4));
+            shaderCount += dataReader.ReadUInt32();
+            
             Decompressor decompressor{ fileStream };
-            Buffer buffer{ 1024 * 1024 };
-
             do
             {
               AwaitOperation(decompressor.ReadAsync(buffer, buffer.Capacity(), InputStreamOptions::None));
               AwaitOperation(memoryStream.WriteAsync(buffer));
-            } while (buffer.Length() > 0);
-
+            } while (buffer.Length() > 0);            
             decompressor.DetachStream();
-            memoryStream.Seek(0);
           }
 
+          AwaitOperation(memoryStream.FlushAsync());
+          memoryStream.Seek(0);
           fileStream.Close();
         }
 
@@ -130,16 +134,20 @@ namespace ShaderGenerator
           DataReader dataReader{ memoryStream };
           AwaitOperation(dataReader.LoadAsync(uint32_t(memoryStream.Size())));
 
-          auto shaderCount = dataReader.ReadUInt32();
-
           shaders.resize(shaderCount);
           for (auto& shader : shaders)
           {
-            shader.Key = dataReader.ReadUInt64();
+            auto magic = dataReader.ReadString(4);
+            if (magic != L"SH01")
+            {
+              throw std::exception("Invalid compiled shader instance header.");
+            }
 
+            shader.Key = dataReader.ReadUInt64();
+            
             auto size = dataReader.ReadUInt32();
             shader.ByteCode.resize(size);
-
+            
             dataReader.ReadBytes(shader.ByteCode);
           }
         }
