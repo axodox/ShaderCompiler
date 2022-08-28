@@ -16,6 +16,9 @@
     <ClInclude Include="ShaderCompilationArguments.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="FileAttributes.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -32,6 +35,9 @@
       <Filter>Config</Filter>
     </ClCompile>
     <ClCompile Include="ShaderCompilationArguments.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="FileAttributes.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
   </ItemGroup>

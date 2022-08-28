@@ -138,6 +138,8 @@ namespace ShaderGenerator
     std::string Namespace;
     std::string Target;
     std::string EntryPoint = "main";
+    std::vector<std::filesystem::path> Dependencies;
+    std::chrono::time_point<std::chrono::system_clock> InputTimestamp;
 
     static ShaderInfo FromFile(const std::filesystem::path& path);
 

@@ -3,7 +3,9 @@
 #include "ShaderConfiguration.h"
 #include "ShaderCompiler.h"
 #include "ShaderOutputWriter.h"
+#include "FileAttributes.h"
 
+using namespace std;
 using namespace winrt;
 using namespace ShaderGenerator;
 
@@ -39,7 +41,7 @@ int main(int argc, char* argv[])
   try
   {
     init_apartment();
-    
+
     auto arguments = ShaderCompilationArguments::Parse(argc, argv);
     if (arguments.WaitForDebugger)
     {
@@ -55,16 +57,33 @@ int main(int argc, char* argv[])
 
     if (!arguments.Header.empty())
     {
-      WriteHeader(arguments, shader);
+      auto skip = false;
+      if (filesystem::exists(arguments.Header))
+      {
+        auto headerTime = get_file_time(arguments.Header, file_time_kind::modification);
+        skip = headerTime > shader.InputTimestamp;
+      }
+
+      if (!skip) WriteHeader(arguments, shader);
     }
 
     if (!arguments.Output.empty())
     {
-      auto output = CompileShader(shader, arguments);
-
-      if (!output.empty())
+      auto skip = false;
+      if (filesystem::exists(arguments.Output))
       {
-        WriteShaderOutput(arguments.Output, output);
+        auto shaderTime = get_file_time(arguments.Output, file_time_kind::modification);
+        skip = shaderTime > shader.InputTimestamp;
+      }
+
+      if (!skip)
+      {
+        auto output = CompileShader(shader, arguments);
+
+        if (!output.empty())
+        {
+          WriteShaderOutput(arguments.Output, output);
+        }
       }
     }
     return 0;

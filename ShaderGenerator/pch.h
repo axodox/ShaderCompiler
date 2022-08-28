@@ -8,6 +8,7 @@
 #include <sstream>
 #include <unordered_set>
 
+#include <Windows.h>
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.h>

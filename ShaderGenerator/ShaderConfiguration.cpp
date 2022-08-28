@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ShaderConfiguration.h"
+#include "FileAttributes.h"
 
 using namespace std;
 
@@ -58,12 +59,60 @@ namespace ShaderGenerator
     return nullptr;
   }
 
+  unordered_set<filesystem::path> GetDependencies(const std::filesystem::path& path)
+  {
+    static regex includeRegex("#include\\s+\"([^\"]*)\"");
+    
+    queue<filesystem::path> dependenciesToCheck;
+    dependenciesToCheck.push(path);
+
+    unordered_set<filesystem::path> dependencies;
+    dependencies.emplace(path.lexically_normal());
+
+    auto parentPath = path.parent_path();
+    while (!dependenciesToCheck.empty())
+    {
+      ifstream file(dependenciesToCheck.front());
+      if (!file.good())
+      {
+        throw std::exception(("Failed to open file " + path.string()).c_str());
+      }
+
+      string line;
+      while (getline(file, line))
+      {
+        smatch match;
+        if (regex_match(line, match, includeRegex))
+        {
+          auto includePath = (parentPath / filesystem::path(match[1].str())).lexically_normal();
+          if (dependencies.emplace(includePath).second)
+          {
+            dependenciesToCheck.push(includePath);
+          }
+        }
+      }
+
+      dependenciesToCheck.pop();
+    }
+
+    return dependencies;
+  }
+
   ShaderInfo ShaderInfo::FromFile(const std::filesystem::path& path)
   {
     ShaderInfo result{};
     result.Path = path;
 
-    static regex regex("#pragma\\s+(target|namespace|entry|option)\\s+(.*)");
+    auto dependencies = GetDependencies(path);
+    result.Dependencies = { dependencies.begin(), dependencies.end() };
+
+    result.InputTimestamp = {};
+    for (auto& dependency : result.Dependencies)
+    {
+      result.InputTimestamp = max(result.InputTimestamp, get_file_time(dependency, file_time_kind::modification));
+    }
+
+    static regex optionRegex("#pragma\\s+(target|namespace|entry|option)\\s+(.*)");
     ifstream file(path);
     if (!file.good())
     {
@@ -74,7 +123,7 @@ namespace ShaderGenerator
     while (getline(file, line))
     {
       smatch match;
-      if (regex_match(line, match, regex))
+      if (regex_match(line, match, optionRegex))
       {
         if (match[1] == "target")
         {

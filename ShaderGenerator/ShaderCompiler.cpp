@@ -134,9 +134,9 @@ namespace ShaderGenerator
           memcpy(result.Data.data(), binary->GetBufferPointer(), binary->GetBufferSize());
         }
       }
-
+      
       //Print out messages
-      stringstream messages{ (char*)errors->GetBufferPointer() };
+      stringstream messages{ string((char*)errors->GetBufferPointer(), size_t(errors->GetBufferSize())) };
       string message;
       static regex warningIgnoreRegex(".*: warning X3568: '(target|namespace|entry|option)' : unknown pragma ignored");
       {
