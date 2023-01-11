@@ -201,11 +201,18 @@ namespace ShaderGenerator
       return { {} };
     }
 
-    std::vector<size_t> indices(options.size());
-    size_t currentIndex = 0;
+    vector<size_t> indices(options.size());
+    size_t currentIndex = indices.size()-1;
     auto done = false;
 
+    size_t permutationCount = 1;
+    for (auto& option : options)
+    {
+      permutationCount *= option->ValueCount();
+    }
+
     vector<OptionPermutation> results;
+    results.reserve(permutationCount);
 
     while (!done)
     {
@@ -230,7 +237,7 @@ namespace ShaderGenerator
         value.Key |= indices[i] << offset;
         offset += option->KeyLength();
       }
-      results.push_back(value);
+      results.push_back(move(value));
 
       //Iterate
       indices[currentIndex]++;
@@ -238,21 +245,24 @@ namespace ShaderGenerator
       while (!done && indices[currentIndex] == options[currentIndex]->ValueCount())
       {
         roll = true;
-        currentIndex++;
-        if (currentIndex == indices.size())
+        if (currentIndex == 0)
         {
           done = true;
           continue;
         }
+        else
+        {
+          currentIndex--;
+        }
 
-        for (size_t i = 0; i < currentIndex; i++)
+        for (size_t i = currentIndex+1; i < indices.size(); i++)
         {
           indices[i] = 0;
         }
         indices[currentIndex]++;
       }
 
-      if (roll) currentIndex = 0;
+      if (roll) currentIndex = indices.size() - 1;
     }
 
     return results;

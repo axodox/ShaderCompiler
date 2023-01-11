@@ -7,6 +7,8 @@
 #include <thread>
 #include <sstream>
 #include <unordered_set>
+#include <algorithm>
+#include <execution>
 
 #include <Windows.h>
 #include <winrt/base.h>

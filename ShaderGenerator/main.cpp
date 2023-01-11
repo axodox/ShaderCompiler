@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
         if (!output.empty())
         {
-          WriteShaderOutput(arguments.Output, output);
+          WriteShaderOutput(arguments.Output, output, shader);
         }
       }
     }

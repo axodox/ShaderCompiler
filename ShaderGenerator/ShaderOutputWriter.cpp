@@ -28,51 +28,81 @@ namespace ShaderGenerator
     return stream.good();
   }
 
+  template<typename T>
+  struct Chunk
+  {
+    const T* Begin;
+    const T* End;
+
+    Chunk(const T* begin, size_t count) : Begin(begin), End(begin + count)
+    { }
+
+    size_t Size() const
+    {
+      return End - Begin;
+    }
+  };
+
+  struct ShaderChunkingInfo
+  {
+    inline static const size_t MaxChunkSize = 128;
+
+    size_t ChunkCount = 1ull;
+    size_t ChunkSize = 0ull;
+    size_t ChunkIndexOffset = 0ull;
+    size_t ChunkIndexMask = 0ull;
+
+    ShaderChunkingInfo(const ShaderInfo& info, size_t shaderVariationCount)
+    {
+      if (shaderVariationCount < MaxChunkSize)
+      {
+        ChunkSize = shaderVariationCount;
+        return;
+      }
+
+      //Find the first N options that divide the variations into chunks that are smaller than MaxChunkSize
+      for (auto& option : info.Options)
+      {
+        ChunkCount *= option->ValueCount();
+        ChunkSize = shaderVariationCount / ChunkCount;
+        ChunkIndexOffset += option->KeyLength();
+        if (ChunkSize <= MaxChunkSize)
+        {
+          //Construct the index mask: first ChunkIndexOffset number of bits are 1s
+          ChunkIndexMask = (uint32_t)(((uint64_t)1 << ChunkIndexOffset) - 1);
+          break;
+        }
+      }
+    }
+  };
+
   struct CompressionBlock
   {
+    uint64_t Key;
     Buffer Data{ nullptr };
     vector<uint64_t> Components;
   };
 
-  struct CompressionContext
+  CompressionBlock CompressWorker(const Chunk<CompiledShader>& shaderChunk, const ShaderChunkingInfo& chunking)
   {
-    std::mutex Mutex;
-    queue<const CompiledShader*> Shaders;
-    list<CompressionBlock> Results;
-  };
+    CompressionBlock block;
+    block.Key = shaderChunk.Begin->Key & chunking.ChunkIndexMask;
+    block.Components.reserve(shaderChunk.Size());
 
-  DWORD WINAPI CompressWorker(LPVOID contextPointer)
-  {
-    //Prepare workset
-    auto context = static_cast<CompressionContext*>(contextPointer);    
-    vector<uint64_t> components;
     InMemoryRandomAccessStream compressedStream;
     Compressor compressor{ compressedStream, CompressAlgorithm::Lzms, 64 * 1024 * 1024 };
 
     //Add shaders
-    const CompiledShader* shader;
-    do
+    for_each(shaderChunk.Begin, shaderChunk.End, [&](const CompiledShader& shader)
     {
-      //Get next shader
-      shader = nullptr;
-      {
-        lock_guard lock(context->Mutex);
-        if (!context->Shaders.empty())
-        {
-          shader = context->Shaders.front();
-          context->Shaders.pop();
-        }
-      }
-      if (!shader) continue;
-
       //Serialize shader
       InMemoryRandomAccessStream uncompressedStream;
       {
         DataWriter dataWriter{ uncompressedStream };
         dataWriter.WriteString(L"SH01");
-        dataWriter.WriteUInt64(shader->Key);
-        dataWriter.WriteUInt32(uint32_t(shader->Data.size()));
-        dataWriter.WriteBytes(shader->Data);
+        dataWriter.WriteUInt64(shader.Key);
+        dataWriter.WriteUInt32(uint32_t(shader.Data.size()));
+        dataWriter.WriteBytes(shader.Data);
         dataWriter.StoreAsync().get();
         dataWriter.FlushAsync().get();
         dataWriter.DetachStream();
@@ -87,8 +117,8 @@ namespace ShaderGenerator
 
       //Write compressed data
       compressor.WriteAsync(buffer).get();
-      components.push_back(shader->Key);
-    } while (shader);
+      block.Components.push_back(shader.Key);
+    });
 
     //Finish compression
     compressor.FlushAsync().get();
@@ -97,44 +127,41 @@ namespace ShaderGenerator
 
     //Save results
     auto blockSize = uint32_t(compressedStream.Size());
-
-    CompressionBlock block;
     block.Data = Buffer{ blockSize };
-    block.Components = move(components);
 
     compressedStream.Seek(0);
     compressedStream.ReadAsync(block.Data, blockSize, InputStreamOptions::None).get();
 
-    {
-      lock_guard lock(context->Mutex);
-      context->Results.push_back(move(block));
-    }
-
-    return 0;
+    return block;
   }
 
-  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shader)
   {
     bool hasDebugInfo = false;
 
     try
     {
-      //Define compression context
-      CompressionContext context;
-      for (auto& shader : compiledShaders)
+      ShaderChunkingInfo chunkingInfo{ shader, compiledShaders.size() };
+
+      //Define compression input
+      vector<Chunk<CompiledShader>> input;
+      input.reserve(chunkingInfo.ChunkCount);
+      for (size_t i = 0; i < compiledShaders.size(); )
       {
-        context.Shaders.push(&shader);
+        Chunk<CompiledShader> chunk{ &compiledShaders[i], min(chunkingInfo.ChunkSize, compiledShaders.size() - i) };
+        input.push_back(chunk);
+        i += chunkingInfo.ChunkSize;
       }
+
+      vector<CompressionBlock> output(input.size());
 
       //Run compression threads
-      auto threadCount = thread::hardware_concurrency();
-      vector<HANDLE> threads(threadCount);
-      for (auto& thread : threads)
-      {
-        thread = CreateThread(nullptr, 0, &CompressWorker, &context, 0, nullptr);
-      }
-
-      WaitForMultipleObjects(DWORD(threads.size()), threads.data(), true, INFINITE);
+      transform(execution::par_unseq, input.begin(), input.end(), output.begin(), 
+        [&](const Chunk<CompiledShader>& shaderChunk) 
+        { 
+          return CompressWorker(shaderChunk, chunkingInfo); 
+        }
+      );
 
       //Write output data
       auto properPath = path;
@@ -144,16 +171,21 @@ namespace ShaderGenerator
       auto fileStream = storageFile.OpenAsync(FileAccessMode::ReadWrite).get();
       
       DataWriter dataWriter{ fileStream };
-      dataWriter.WriteString(L"CSG2");      
-      dataWriter.WriteUInt32(uint32_t(context.Results.size()));
+      dataWriter.WriteString(L"CSG3");
+      dataWriter.WriteUInt64(chunkingInfo.ChunkIndexMask);
+      dataWriter.WriteUInt32(uint32_t(output.size()));
 
-      for (auto& block : context.Results)
+      size_t compressedOffset = 0;
+      for (auto& block : output)
       {
+        dataWriter.WriteUInt64(block.Key);
         dataWriter.WriteUInt32(uint32_t(block.Components.size()));
-        /*for (auto key : block.Components)
-        {
-          dataWriter.WriteUInt64(key);
-        }*/
+        dataWriter.WriteUInt64(compressedOffset);
+        compressedOffset += block.Data.Length();
+      }
+
+      for (auto& block : output)
+      {
         dataWriter.WriteBuffer(block.Data);
       }
 
@@ -205,7 +237,7 @@ namespace ShaderGenerator
     }
   }
 
-  void WriteShaderOutput(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  void WriteShaderOutput(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shader)
   {
     auto root = path.parent_path();
 
@@ -223,7 +255,7 @@ namespace ShaderGenerator
     {
       wprintf(L"Writing output shaders to %s...\n", root.c_str());
 
-      hasDebugInfo = WriteShaderBinary(path, compiledShaders);
+      hasDebugInfo = WriteShaderBinary(path, compiledShaders, shader);
     }
 
     //Write debug database
