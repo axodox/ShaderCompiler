@@ -6,6 +6,7 @@ using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Compression;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
+using namespace std::filesystem;
 
 namespace ShaderGenerator
 {
@@ -16,7 +17,7 @@ namespace ShaderGenerator
     stream.write((char*)&value, sizeof(T));
   }
 
-  bool WriteAllBytes(const std::filesystem::path& path, const std::vector<uint8_t>& bytes)
+  bool WriteAllBytes(const path& path, const vector<uint8_t>& bytes)
   {
     ofstream stream(path, ios::out | ios::binary);
 
@@ -27,21 +28,6 @@ namespace ShaderGenerator
 
     return stream.good();
   }
-
-  template<typename T>
-  struct Chunk
-  {
-    const T* Begin;
-    const T* End;
-
-    Chunk(const T* begin, size_t count) : Begin(begin), End(begin + count)
-    { }
-
-    size_t Size() const
-    {
-      return End - Begin;
-    }
-  };
 
   struct ShaderChunkingInfo
   {
@@ -83,17 +69,17 @@ namespace ShaderGenerator
     vector<uint64_t> Components;
   };
 
-  CompressionBlock CompressWorker(const Chunk<CompiledShader>& shaderChunk, const ShaderChunkingInfo& chunking)
+  CompressionBlock CompressWorker(const array_view<const CompiledShader>& shaderChunk, const ShaderChunkingInfo& chunking)
   {
     CompressionBlock block;
-    block.Key = shaderChunk.Begin->Key & chunking.ChunkIndexMask;
-    block.Components.reserve(shaderChunk.Size());
+    block.Key = shaderChunk.begin()->Key & chunking.ChunkIndexMask;
+    block.Components.reserve(shaderChunk.size());
 
     InMemoryRandomAccessStream compressedStream;
     Compressor compressor{ compressedStream, CompressAlgorithm::Lzms, 64 * 1024 * 1024 };
 
     //Add shaders
-    for_each(shaderChunk.Begin, shaderChunk.End, [&](const CompiledShader& shader)
+    for(auto& shader : shaderChunk)
     {
       //Serialize shader
       InMemoryRandomAccessStream uncompressedStream;
@@ -118,7 +104,7 @@ namespace ShaderGenerator
       //Write compressed data
       compressor.WriteAsync(buffer).get();
       block.Components.push_back(shader.Key);
-    });
+    }
 
     //Finish compression
     compressor.FlushAsync().get();
@@ -144,20 +130,20 @@ namespace ShaderGenerator
       ShaderChunkingInfo chunkingInfo{ shader, compiledShaders.size() };
 
       //Define compression input
-      vector<Chunk<CompiledShader>> input;
+      vector<array_view<const CompiledShader>> input;
       input.reserve(chunkingInfo.ChunkCount);
       for (size_t i = 0; i < compiledShaders.size(); )
       {
-        Chunk<CompiledShader> chunk{ &compiledShaders[i], min(chunkingInfo.ChunkSize, compiledShaders.size() - i) };
+        array_view<const CompiledShader> chunk( &compiledShaders[i], uint32_t(min(chunkingInfo.ChunkSize, compiledShaders.size() - i)));
         input.push_back(chunk);
-        i += chunkingInfo.ChunkSize;
+        i += chunk.size();
       }
 
       vector<CompressionBlock> output(input.size());
 
       //Run compression threads
       transform(execution::par_unseq, input.begin(), input.end(), output.begin(), 
-        [&](const Chunk<CompiledShader>& shaderChunk) 
+        [&](const auto& shaderChunk) 
         { 
           return CompressWorker(shaderChunk, chunkingInfo); 
         }
