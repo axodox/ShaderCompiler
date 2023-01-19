@@ -130,6 +130,8 @@ namespace ShaderGenerator
     {
       ShaderBlockLayout blockLayout{ shaderInfo, compiledShaders.size() };
 
+      wprintf(L"Layout: %zu block(s), %zu shader variants in each block.\n", blockLayout.BlockCount, blockLayout.BlockSize);
+
       //Define compression input
       vector<array_view<const CompiledShader>> input;
       input.reserve(blockLayout.BlockCount);
