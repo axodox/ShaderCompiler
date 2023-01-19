@@ -40,7 +40,7 @@ namespace ShaderGenerator
 
     ShaderBlockLayout(const ShaderInfo& info, size_t shaderVariationCount)
     {
-      if (shaderVariationCount < MaxBlockSize)
+      if (shaderVariationCount <= MaxBlockSize)
       {
         BlockSize = shaderVariationCount;
       }
