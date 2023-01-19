@@ -29,34 +29,35 @@ namespace ShaderGenerator
     return stream.good();
   }
 
-  struct ShaderChunkingInfo
+  struct ShaderBlockLayout
   {
-    inline static const size_t MaxChunkSize = 128;
+    inline static const size_t MaxBlockSize = 128;
 
-    size_t ChunkCount = 1ull;
-    size_t ChunkSize = 0ull;
-    size_t ChunkIndexOffset = 0ull;
-    size_t ChunkIndexMask = 0ull;
+    size_t BlockCount = 1ull;
+    size_t BlockSize = 0ull;
+    size_t BlockIndexOffset = 0ull;
+    size_t BlockIndexMask = 0ull;
 
-    ShaderChunkingInfo(const ShaderInfo& info, size_t shaderVariationCount)
+    ShaderBlockLayout(const ShaderInfo& info, size_t shaderVariationCount)
     {
-      if (shaderVariationCount < MaxChunkSize)
+      if (shaderVariationCount < MaxBlockSize)
       {
-        ChunkSize = shaderVariationCount;
-        return;
+        BlockSize = shaderVariationCount;
       }
-
-      //Find the first N options that divide the variations into chunks that are smaller than MaxChunkSize
-      for (auto& option : info.Options)
+      else
       {
-        ChunkCount *= option->ValueCount();
-        ChunkSize = shaderVariationCount / ChunkCount;
-        ChunkIndexOffset += option->KeyLength();
-        if (ChunkSize <= MaxChunkSize)
+        //Find the first N options that divide the variations into blocks that are smaller than MaxBlockSize
+        for (auto& option : info.Options)
         {
-          //Construct the index mask: first ChunkIndexOffset number of bits are 1s
-          ChunkIndexMask = (uint32_t)(((uint64_t)1 << ChunkIndexOffset) - 1);
-          break;
+          BlockCount *= option->ValueCount();
+          BlockSize = shaderVariationCount / BlockCount;
+          BlockIndexOffset += option->KeyLength();
+          if (BlockSize <= MaxBlockSize)
+          {
+            //Construct the index mask: first BlockIndexOffset number of bits are 1s
+            BlockIndexMask = (uint32_t)(((uint64_t)1 << BlockIndexOffset) - 1);
+            break;
+          }
         }
       }
     }
@@ -69,17 +70,17 @@ namespace ShaderGenerator
     vector<uint64_t> Components;
   };
 
-  CompressionBlock CompressWorker(const array_view<const CompiledShader>& shaderChunk, const ShaderChunkingInfo& chunking)
+  CompressionBlock CreateShaderBlock(const array_view<const CompiledShader>& shaders, const ShaderBlockLayout& layout)
   {
     CompressionBlock block;
-    block.Key = shaderChunk.begin()->Key & chunking.ChunkIndexMask;
-    block.Components.reserve(shaderChunk.size());
+    block.Key = shaders.begin()->Key & layout.BlockIndexMask;
+    block.Components.reserve(shaders.size());
 
     InMemoryRandomAccessStream compressedStream;
     Compressor compressor{ compressedStream, CompressAlgorithm::Lzms, 64 * 1024 * 1024 };
 
     //Add shaders
-    for(auto& shader : shaderChunk)
+    for(auto& shader : shaders)
     {
       //Serialize shader
       InMemoryRandomAccessStream uncompressedStream;
@@ -121,31 +122,31 @@ namespace ShaderGenerator
     return block;
   }
 
-  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shader)
+  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shaderInfo)
   {
     bool hasDebugInfo = false;
 
     try
     {
-      ShaderChunkingInfo chunkingInfo{ shader, compiledShaders.size() };
+      ShaderBlockLayout blockLayout{ shaderInfo, compiledShaders.size() };
 
       //Define compression input
       vector<array_view<const CompiledShader>> input;
-      input.reserve(chunkingInfo.ChunkCount);
+      input.reserve(blockLayout.BlockCount);
       for (size_t i = 0; i < compiledShaders.size(); )
       {
-        array_view<const CompiledShader> chunk( &compiledShaders[i], uint32_t(min(chunkingInfo.ChunkSize, compiledShaders.size() - i)));
-        input.push_back(chunk);
-        i += chunk.size();
+        array_view<const CompiledShader> block( &compiledShaders[i], uint32_t(blockLayout.BlockSize) );
+        input.push_back(block);
+        i += block.size();
       }
 
       vector<CompressionBlock> output(input.size());
 
       //Run compression threads
       transform(execution::par_unseq, input.begin(), input.end(), output.begin(), 
-        [&](const auto& shaderChunk) 
+        [&](const auto& shaderBlock) 
         { 
-          return CompressWorker(shaderChunk, chunkingInfo); 
+          return CreateShaderBlock(shaderBlock, blockLayout); 
         }
       );
 
@@ -158,7 +159,7 @@ namespace ShaderGenerator
       
       DataWriter dataWriter{ fileStream };
       dataWriter.WriteString(L"CSG3");
-      dataWriter.WriteUInt64(chunkingInfo.ChunkIndexMask);
+      dataWriter.WriteUInt64(blockLayout.BlockIndexMask);
       dataWriter.WriteUInt32(uint32_t(output.size()));
 
       size_t compressedOffset = 0;

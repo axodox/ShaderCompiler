@@ -17,26 +17,37 @@ namespace ShaderGenerator
   struct CompiledShader
   {
     uint64_t Key;
+    uint32_t Size;
     std::vector<uint8_t> ByteCode;
   };
 
-  struct ChunkInfo
+  struct BlockInfo
   {
-    uint32_t ShaderCount = 0ull;
+    uint32_t ShaderCount = 0u;
     size_t CompressedOffset = 0ull;
+  };
+
+  struct UncompressedBlock
+  {
+    uint64_t Index;
+    std::unordered_map<uint64_t, uint64_t> ShaderOffsets;
+    winrt::Windows::Storage::Streams::InMemoryRandomAccessStream Block;
   };
 
   class CompiledShaderGroup
   {
   private:
-    //Bitmask used to obtain chunk key from a shader key
-    uint64_t _chunkIndexMask = 0;
+    //Bitmask used to obtain block key from a shader key
+    uint64_t _blockIndexMask = 0;
 
-    //All compressed chunks
-    winrt::Windows::Storage::Streams::InMemoryRandomAccessStream _compressedChunks { nullptr };
+    //All compressed blocks
+    winrt::Windows::Storage::Streams::IRandomAccessStream _compressedBlocks { nullptr };
 
-    //Info about the compressed chunks 
-    std::unordered_map<uint64_t, ChunkInfo> _chunkInfos;
+    //Info about the compressed blocks 
+    std::unordered_map<uint64_t, BlockInfo> _blockInfos;
+
+    //Last uncompressed block
+    std::optional<UncompressedBlock> _uncompressedBlock;
 
     //Cache for the uncompressed shaders
     std::unordered_map<uint64_t, CompiledShader> _shadersByKey;
@@ -61,12 +72,172 @@ namespace ShaderGenerator
       AwaitOperation(async);
       return async.GetResults();
     }
+
+    template<typename T>
+    static T read_internal(winrt::Windows::Storage::Streams::DataReader& reader);
+
+    template<>
+    static uint32_t read_internal<uint32_t>(winrt::Windows::Storage::Streams::DataReader& reader)
+    {
+      return reader.ReadUInt32();
+    }
+
+    template<>
+    static uint64_t read_internal<uint64_t>(winrt::Windows::Storage::Streams::DataReader& reader)
+    {
+      return reader.ReadUInt64();
+    }
+
+    template<typename T>
+    static void read(winrt::Windows::Storage::Streams::DataReader& reader, T& value)
+    {
+      static_assert(std::is_trivially_copyable_v<T>);
+      AwaitOperation(reader.LoadAsync(sizeof(T)));
+      value = read_internal<T>(reader);
+    }
+
+    static void read(winrt::Windows::Storage::Streams::DataReader& reader, std::vector<uint8_t>& value)
+    {
+      AwaitOperation(reader.LoadAsync(uint32_t(value.size())));
+      reader.ReadBytes(value);
+    }
+
+    template<typename T>
+    static auto read(winrt::Windows::Storage::Streams::DataReader& reader)
+    {
+      T value{};
+      read(reader, value);
+      return value;
+    }
+
+    static auto read_string(winrt::Windows::Storage::Streams::DataReader& reader, uint32_t length)
+    {
+      AwaitOperation(reader.LoadAsync(length));
+      return reader.ReadString(length);
+    }
+
+    static CompiledShader read_shader(winrt::Windows::Storage::Streams::DataReader& reader, bool partial = false)
+    {
+      auto magic = read_string(reader, 4);
+      if (magic != L"SH01")
+      {
+        throw std::exception("Invalid compiled shader instance header.");
+      }
+
+      CompiledShader shader;
+      read(reader, shader.Key);
+      read(reader, shader.Size);
+
+      if (!partial)
+      {
+        shader.ByteCode.resize(shader.Size);
+        read(reader, shader.ByteCode);
+      }
+
+      return shader;
+    }
     
     static bool IsUwp()
     {
       uint32_t length = 0;
       auto result = GetCurrentPackageFullName(&length, nullptr);
       return result == APPMODEL_ERROR_NO_PACKAGE ? false : true;
+    }
+
+    const CompiledShader* LoadFromUncompressedBlock(uint64_t key)
+    {
+      using namespace winrt::Windows::Storage::Streams;
+
+      auto it = _uncompressedBlock->ShaderOffsets.find(key);
+      if (it != _uncompressedBlock->ShaderOffsets.end())
+      {
+        auto shaderPosition = it->second;
+        _uncompressedBlock->Block.Seek(shaderPosition);
+
+        DataReader dataReader{ _uncompressedBlock->Block };
+
+        auto shader = read_shader(dataReader);
+
+        dataReader.DetachStream();
+
+        auto [shaderIt, _] = _shadersByKey.emplace(key, std::move(shader));
+        return &shaderIt->second;
+      }
+      else
+      {
+        //Internal error, should not happen
+        throw std::exception("Shader not present.");
+      }
+    }
+
+    const CompiledShader* LoadFromCompressedBlock(uint64_t blockIndex, const BlockInfo& blockInfo, uint64_t key)
+    {
+      using namespace winrt::Windows::Storage::Streams;
+      using namespace winrt::Windows::Storage::Compression;
+
+      auto startPosition = _compressedBlocks.Position();
+
+      //Seek to the start of the compressed block
+      _compressedBlocks.Seek(startPosition + blockInfo.CompressedOffset);
+
+      UncompressedBlock uncompressedBlock;
+      uncompressedBlock.Index = blockIndex;
+
+      //Decompress block
+      {
+        Buffer buffer{ 1024 * 1024 };
+        Decompressor decompressor{ _compressedBlocks };
+        do
+        {
+          AwaitOperation(decompressor.ReadAsync(buffer, buffer.Capacity(), InputStreamOptions::None));
+          AwaitOperation(uncompressedBlock.Block.WriteAsync(buffer));
+        } while (buffer.Length() > 0);
+        decompressor.DetachStream();
+        uncompressedBlock.Block.Seek(0);
+      }
+
+      //Set up shader offsets
+      {
+        DataReader dataReader{ uncompressedBlock.Block };
+
+        for (uint32_t i = 0; i < blockInfo.ShaderCount; ++i)
+        {
+          auto shaderStart = uncompressedBlock.Block.Position();
+          CompiledShader shader = read_shader(dataReader, true);
+
+          if (shader.Key == key)
+          {
+            shader.ByteCode.resize(shader.Size);
+            read(dataReader, shader.ByteCode);
+            _shadersByKey.emplace(key, std::move(shader));
+          }
+          else
+          {
+            uncompressedBlock.ShaderOffsets[shader.Key] = shaderStart;
+            uncompressedBlock.Block.Seek(uncompressedBlock.Block.Position() + shader.Size);
+          }
+        }
+
+        dataReader.DetachStream();
+      }
+
+      //Seek back to the first block
+      _compressedBlocks.Seek(startPosition);
+
+      //Replace the cached uncompressed block
+      _uncompressedBlock = std::move(uncompressedBlock);
+
+      //Return the uncompressed shader
+      auto it = _shadersByKey.find(key);
+      if (it != _shadersByKey.end())
+      {
+        return &it->second;
+      }
+      else
+      {
+        //Internal error, should not happen
+        throw std::exception("Shader not present.");
+      }
     }
 
   public:
@@ -87,7 +258,6 @@ namespace ShaderGenerator
       using namespace winrt::Windows::Storage::Streams;
 
       CompiledShaderGroup result;
-      result._compressedChunks = InMemoryRandomAccessStream{};
 
       try
       {
@@ -107,40 +277,32 @@ namespace ShaderGenerator
             storageFile = AwaitResults(StorageFile::GetFileFromPathAsync(preferredPath.c_str()));
           }
 
-          auto fileStream = AwaitResults(storageFile.OpenAsync(FileAccessMode::Read));
-
-          //Copy file to the memorystream
-          AwaitOperation(RandomAccessStream::CopyAsync(fileStream, result._compressedChunks));
+          result._compressedBlocks = AwaitResults(storageFile.OpenAsync(FileAccessMode::Read));
         }
 
-        result._compressedChunks.Seek(0);
-
-        DataReader dataReader{ result._compressedChunks };
+        DataReader dataReader{ result._compressedBlocks };
 
         //Check header
-        AwaitOperation(dataReader.LoadAsync(4 + sizeof(uint64_t) + sizeof(uint32_t)));
-        auto magic = dataReader.ReadString(4);
+        auto magic = read_string(dataReader, 4);
         if (magic != L"CSG3")
         {
           throw std::exception("Invalid compiled shader group file header.");
         }
 
-        //Read chunk index mask and block count
-        result._chunkIndexMask = dataReader.ReadUInt64();
-        auto blockCount = dataReader.ReadUInt32();
-
-        AwaitOperation(dataReader.LoadAsync((2 * sizeof(uint64_t) + sizeof(uint32_t)) * blockCount));
-
-        //Read chunk infos
+        //Read block index mask and block count
+        read(dataReader, result._blockIndexMask);
+        auto blockCount = read<uint32_t>(dataReader);
+       
+        //Read block infos
         for (uint32_t i = 0; i < blockCount; ++i)
         {
-          auto key = dataReader.ReadUInt64();
+          auto key = read<uint64_t>(dataReader);
 
-          ChunkInfo info;
-          info.ShaderCount = dataReader.ReadUInt32();
-          info.CompressedOffset = dataReader.ReadUInt64();
+          BlockInfo info;
+          read(dataReader, info.ShaderCount);
+          read(dataReader, info.CompressedOffset);
 
-          result._chunkInfos[key] = info;
+          result._blockInfos[key] = info;
         }
 
         dataReader.DetachStream();
@@ -148,8 +310,8 @@ namespace ShaderGenerator
       catch (...)
       {
         //Return empty result
-        result._compressedChunks = nullptr;
-        result._chunkInfos.clear();
+        result._compressedBlocks = nullptr;
+        result._blockInfos.clear();
 
         throw std::exception("Failed to open compiled shader group file.");
       }
@@ -164,81 +326,20 @@ namespace ShaderGenerator
 
     const CompiledShader* Shader(uint64_t key)
     {
-      using namespace winrt::Windows::Storage::Streams;
-      using namespace winrt::Windows::Storage::Compression;
+      auto blockIndex = key & _blockIndexMask;
 
       if (auto shaderIt = _shadersByKey.find(key); shaderIt != _shadersByKey.end())
       {
         //Shader found in cache, return it
         return &shaderIt->second;
       }
-      else if (auto chunkIt = _chunkInfos.find(key & _chunkIndexMask); chunkIt != _chunkInfos.end() && _compressedChunks)
+      else if (_uncompressedBlock && _uncompressedBlock->Index == blockIndex)
       {
-        //Clear the cached shaders
-        _shadersByKey.clear();
-
-        auto& chunkInfo = chunkIt->second;
-
-        auto startPosition = _compressedChunks.Position();
-
-        //Seek to the start of the compressed chunk
-        _compressedChunks.Seek(startPosition + chunkInfo.CompressedOffset);
-
-        InMemoryRandomAccessStream uncompressedChunk;
-
-        //Decompress chunk
-        {
-          Buffer buffer{ 1024 * 1024 };
-          Decompressor decompressor{ _compressedChunks };
-          do
-          {
-            AwaitOperation(decompressor.ReadAsync(buffer, buffer.Capacity(), InputStreamOptions::None));
-            AwaitOperation(uncompressedChunk.WriteAsync(buffer));
-          } while (buffer.Length() > 0);
-          decompressor.DetachStream();
-          uncompressedChunk.Seek(0);
-        }
-
-        //Parse every shader in the uncompressed chunk
-        {
-          DataReader dataReader{ uncompressedChunk };
-          AwaitOperation(dataReader.LoadAsync(uint32_t(uncompressedChunk.Size())));
-
-          for (uint32_t i=0; i<chunkInfo.ShaderCount; ++i)
-          {
-            auto magic = dataReader.ReadString(4);
-            if (magic != L"SH01")
-            {
-              throw std::exception("Invalid compiled shader instance header.");
-            }
-
-            CompiledShader shader;
-            auto shaderKey = dataReader.ReadUInt64();
-            shader.Key = shaderKey;
-
-            auto size = dataReader.ReadUInt32();
-            shader.ByteCode.resize(size);
-
-            dataReader.ReadBytes(shader.ByteCode);
-
-            _shadersByKey.emplace(shaderKey, std::move(shader));
-          }
-        }
-
-        //Seek back to the first chunk
-        _compressedChunks.Seek(startPosition);
-
-        //Return the uncompressed shader
-        auto it = _shadersByKey.find(key);
-        if (it != _shadersByKey.end())
-        {
-          return &it->second;
-        }
-        else
-        {
-          //Internal error, should not happen
-          throw std::exception("Shader not present.");
-        }
+        return LoadFromUncompressedBlock(key);
+      }
+      else if (auto blockIt = _blockInfos.find(blockIndex); blockIt != _blockInfos.end() && _compressedBlocks)
+      {
+        return LoadFromCompressedBlock(blockIndex, blockIt->second, key);
       }
       else
       {
@@ -250,6 +351,12 @@ namespace ShaderGenerator
     const CompiledShader* Shader(T key)
     {
       return Shader(uint64_t(key));
+    }
+
+    void ClearCache()
+    {
+      _shadersByKey.clear();
+      _uncompressedBlock.reset();
     }
   };
 }
