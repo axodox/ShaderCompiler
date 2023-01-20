@@ -196,7 +196,8 @@ namespace ShaderGenerator
         uncompressedBlock.Block.Seek(0);
       }
 
-      //Set up shader offsets
+      //Set up shader offsets and load the queried shader
+      CompiledShader* queriedShader = nullptr;
       {
         DataReader dataReader{ uncompressedBlock.Block };
 
@@ -209,7 +210,7 @@ namespace ShaderGenerator
           {
             shader.ByteCode.resize(shader.Size);
             read(dataReader, shader.ByteCode);
-            _shadersByKey.emplace(key, std::move(shader));
+            queriedShader = &_shadersByKey.emplace(key, std::move(shader)).first->second;
           }
           else
           {
@@ -228,10 +229,9 @@ namespace ShaderGenerator
       _uncompressedBlock = std::move(uncompressedBlock);
 
       //Return the uncompressed shader
-      auto it = _shadersByKey.find(key);
-      if (it != _shadersByKey.end())
+      if (queriedShader)
       {
-        return &it->second;
+        return queriedShader;
       }
       else
       {

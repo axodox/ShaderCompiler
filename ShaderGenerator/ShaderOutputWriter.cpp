@@ -31,7 +31,7 @@ namespace ShaderGenerator
 
   struct ShaderBlockLayout
   {
-    inline static const size_t MaxBlockSize = 128;
+    inline static const size_t MaxBlockSize = 64;
 
     size_t BlockCount = 1ull;
     size_t BlockSize = 0ull;
