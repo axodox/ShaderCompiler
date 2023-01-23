@@ -131,6 +131,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FileAttributes.h" />
+    <ClInclude Include="IO.h" />
     <ClInclude Include="ShaderCompilationArguments.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShaderCompiler.h" />
@@ -139,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileAttributes.cpp" />
+    <ClCompile Include="IO.cpp" />
     <ClCompile Include="ShaderCompilationArguments.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">

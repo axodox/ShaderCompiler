@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <execution>
 
+#define NOMINMAX
+
 #include <Windows.h>
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>

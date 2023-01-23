@@ -19,6 +19,9 @@
     <ClInclude Include="FileAttributes.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="IO.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -38,6 +41,9 @@
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="FileAttributes.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="IO.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
   </ItemGroup>

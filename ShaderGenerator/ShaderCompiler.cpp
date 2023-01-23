@@ -24,13 +24,7 @@ namespace ShaderGenerator
     { }
   };
 
-  struct ShaderDebugName
-  {
-    uint16_t Flags;
-    uint16_t NameLength;
-  };
-
-  CompiledShader CompileWorker(const OptionPermutation& permutation, ShaderCompilationContext& context)
+  CompiledShader CompileShaderPermutation(const OptionPermutation& permutation, ShaderCompilationContext& context)
   {
     //Define result
     CompiledShader result{};
@@ -97,6 +91,12 @@ namespace ShaderGenerator
 
         if (pdb && pdbName)
         {
+          struct ShaderDebugName
+          {
+            uint16_t Flags;
+            uint16_t NameLength;
+          };
+
           auto pDebugNameData = reinterpret_cast<const ShaderDebugName*>(pdbName->GetBufferPointer());
           auto fileName = reinterpret_cast<const char*>(pDebugNameData + 1);
 
@@ -110,7 +110,7 @@ namespace ShaderGenerator
         swap(binary, stripped);
       }
 
-      //Save binary
+      //Store binary
       {
         result.Data.resize(binary->GetBufferSize());
         memcpy(result.Data.data(), binary->GetBufferPointer(), binary->GetBufferSize());
@@ -141,7 +141,7 @@ namespace ShaderGenerator
     return result;
   }
 
-  vector<CompiledShader> ShaderGenerator::CompileShader(const ShaderInfo& shader, const ShaderCompilationArguments& options)
+  vector<CompiledShader> CompileShader(const ShaderInfo& shader, const ShaderCompilationArguments& options)
   {
     auto permutations = ShaderOption::Permutate(shader.Options);
     ShaderCompilationContext context{shader, options, permutations};
@@ -154,7 +154,7 @@ namespace ShaderGenerator
     transform(execution::par, context.Input->begin(), context.Input->end(), context.Output.begin(), 
       [&](const OptionPermutation& permutation) 
       { 
-        return CompileWorker(permutation, context); 
+        return CompileShaderPermutation(permutation, context); 
       }
     );
 
