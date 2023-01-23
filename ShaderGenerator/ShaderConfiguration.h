@@ -20,11 +20,7 @@ namespace ShaderGenerator
   {
     std::string Name;
     
-    virtual size_t KeyLength() const
-    {
-      auto range = ValueCount();
-      return range > 0 ? (size_t)ceil(log2(float(range))) : 0;
-    }
+    virtual size_t KeyLength() const;
 
     virtual OptionType Type() const = 0;
 
@@ -41,94 +37,39 @@ namespace ShaderGenerator
 
   struct BooleanOption : public ShaderOption
   {
-    virtual OptionType Type() const override
-    {
-      return OptionType::Boolean;
-    }
+    virtual OptionType Type() const override;
 
-    virtual size_t ValueCount() const override
-    {
-      return 2;
-    }
+    virtual size_t ValueCount() const override;
 
-    virtual bool IsValueDefinedExplicitly() const override
-    {
-      return false;
-    }
+    virtual bool IsValueDefinedExplicitly() const override;
 
-    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override
-    {
-      value = "";
-      return index == 1;
-    }
+    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override;
   };
 
   struct EnumerationOption : public ShaderOption
   {
     std::vector<std::string> Values;
 
-    virtual OptionType Type() const override
-    {
-      return OptionType::Enumeration;
-    }
+    virtual OptionType Type() const override;
 
-    virtual size_t ValueCount() const override
-    {
-      return Values.size();
-    }
+    virtual size_t ValueCount() const override;
 
-    virtual bool IsValueDefinedExplicitly() const override
-    {
-      return true;
-    }
+    virtual bool IsValueDefinedExplicitly() const override;
 
-    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override
-    {
-      if (index >= 0 && index < Values.size())
-      {
-        value = Values.at(index);
-        return true;
-      }
-      else
-      {
-        value = "";
-        return false;
-      }
-    }
+    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override;
   };
 
   struct IntegerOption : public ShaderOption
   {
     int Minimum, Maximum;
 
-    virtual OptionType Type() const override
-    {
-      return OptionType::Integer;
-    }
+    virtual OptionType Type() const override;
 
-    virtual size_t ValueCount() const override
-    {
-      return size_t(Maximum - Minimum) + 1;
-    }
+    virtual size_t ValueCount() const override;
 
-    virtual bool IsValueDefinedExplicitly() const override
-    {
-      return true;
-    }
+    virtual bool IsValueDefinedExplicitly() const override;
 
-    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override
-    {
-      if (index >= 0 && index < ValueCount())
-      {
-        value = std::to_string(index + Minimum);
-        return true;
-      }
-      else
-      {
-        value = "";
-        return false;
-      }
-    }
+    virtual bool TryGetDefinedValue(size_t index, std::string& value) const override;
   };
 
   struct ShaderInfo

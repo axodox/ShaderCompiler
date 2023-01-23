@@ -1,78 +1,78 @@
 #include "pch.h"
 #include "ShaderOutputWriter.h"
+#include "IO.h"
 
 using namespace winrt;
 using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Compression;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
+using namespace std::filesystem;
 
 namespace ShaderGenerator
 {
-  template<typename T>
-  void WriteValue(ofstream& stream, const T& value)
+  struct ShaderBlockLayout
   {
-    static_assert(is_trivially_copyable<T>::value);
-    stream.write((char*)&value, sizeof(T));
-  }
+    inline static const size_t MaxBlockSize = 64;
 
-  bool WriteAllBytes(const std::filesystem::path& path, const std::vector<uint8_t>& bytes)
-  {
-    ofstream stream(path, ios::out | ios::binary);
+    size_t BlockCount = 1ull;
+    size_t BlockSize = 0ull;
+    size_t BlockIndexOffset = 0ull;
+    uint64_t BlockIndexMask = 0ull;
 
-    if (stream.good())
+    ShaderBlockLayout(const ShaderInfo& info, size_t shaderVariationCount)
     {
-      stream.write((const char*)bytes.data(), bytes.size());
+      if (shaderVariationCount <= MaxBlockSize)
+      {
+        BlockSize = shaderVariationCount;
+      }
+      else
+      {
+        //Find the first N options that divide the variations into blocks that are smaller than MaxBlockSize
+        for (auto& option : info.Options)
+        {
+          BlockCount *= option->ValueCount();
+          BlockSize = shaderVariationCount / BlockCount;
+          BlockIndexOffset += option->KeyLength();
+          if (BlockSize <= MaxBlockSize)
+          {
+            //Construct the index mask: first BlockIndexOffset number of bits are 1s
+            BlockIndexMask = (1ull << BlockIndexOffset) - 1;
+            break;
+          }
+        }
+      }
     }
-
-    return stream.good();
-  }
+  };
 
   struct CompressionBlock
   {
-    Buffer Data{ nullptr };
+    uint64_t Key;
     vector<uint64_t> Components;
+    Buffer Data{ nullptr };
   };
 
-  struct CompressionContext
+  CompressionBlock CreateShaderBlock(const array_view<const CompiledShader>& shaders, const ShaderBlockLayout& layout)
   {
-    std::mutex Mutex;
-    queue<const CompiledShader*> Shaders;
-    list<CompressionBlock> Results;
-  };
+    CompressionBlock block;
+    block.Key = shaders.begin()->Key & layout.BlockIndexMask;
+    block.Components.reserve(shaders.size());
 
-  DWORD WINAPI CompressWorker(LPVOID contextPointer)
-  {
-    //Prepare workset
-    auto context = static_cast<CompressionContext*>(contextPointer);    
-    vector<uint64_t> components;
     InMemoryRandomAccessStream compressedStream;
     Compressor compressor{ compressedStream, CompressAlgorithm::Lzms, 64 * 1024 * 1024 };
 
     //Add shaders
-    const CompiledShader* shader;
-    do
+    for (auto& shader : shaders)
     {
-      //Get next shader
-      shader = nullptr;
-      {
-        lock_guard lock(context->Mutex);
-        if (!context->Shaders.empty())
-        {
-          shader = context->Shaders.front();
-          context->Shaders.pop();
-        }
-      }
-      if (!shader) continue;
-
       //Serialize shader
       InMemoryRandomAccessStream uncompressedStream;
       {
         DataWriter dataWriter{ uncompressedStream };
+        dataWriter.ByteOrder(ByteOrder::LittleEndian);
         dataWriter.WriteString(L"SH01");
-        dataWriter.WriteUInt64(shader->Key);
-        dataWriter.WriteUInt32(uint32_t(shader->Data.size()));
-        dataWriter.WriteBytes(shader->Data);
+        dataWriter.WriteUInt64(shader.Key);
+        dataWriter.WriteUInt32(uint32_t(shader.Data.size()));
+        dataWriter.WriteBytes(shader.Data);
         dataWriter.StoreAsync().get();
         dataWriter.FlushAsync().get();
         dataWriter.DetachStream();
@@ -87,8 +87,8 @@ namespace ShaderGenerator
 
       //Write compressed data
       compressor.WriteAsync(buffer).get();
-      components.push_back(shader->Key);
-    } while (shader);
+      block.Components.push_back(shader.Key);
+    }
 
     //Finish compression
     compressor.FlushAsync().get();
@@ -97,63 +97,73 @@ namespace ShaderGenerator
 
     //Save results
     auto blockSize = uint32_t(compressedStream.Size());
-
-    CompressionBlock block;
     block.Data = Buffer{ blockSize };
-    block.Components = move(components);
 
     compressedStream.Seek(0);
     compressedStream.ReadAsync(block.Data, blockSize, InputStreamOptions::None).get();
 
-    {
-      lock_guard lock(context->Mutex);
-      context->Results.push_back(move(block));
-    }
-
-    return 0;
+    return block;
   }
 
-  bool WriteShaderBinary(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  void WriteShaderBinary(std::filesystem::path path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shaderInfo)
   {
-    bool hasDebugInfo = false;
-
     try
     {
-      //Define compression context
-      CompressionContext context;
-      for (auto& shader : compiledShaders)
+      wprintf(L"Writing output shaders to %s...\n", path.c_str());
+
+      //Ensure output directory
+      auto root = path.parent_path();
+
+      error_code ec;
+      filesystem::create_directory(root, ec);
+      if (ec) throw runtime_error("Failed to create output directory.");
+
+      //Define block layout
+      ShaderBlockLayout blockLayout{ shaderInfo, compiledShaders.size() };
+      wprintf(L"Layout: %zu block(s), %zu shader variants in each block.\n", blockLayout.BlockCount, blockLayout.BlockSize);
+
+      //Organize compiled shaders into blocks
+      vector<array_view<const CompiledShader>> input;
+      input.reserve(blockLayout.BlockCount);
+      for (size_t i = 0; i < compiledShaders.size(); )
       {
-        context.Shaders.push(&shader);
+        array_view<const CompiledShader> block(&compiledShaders[i], uint32_t(blockLayout.BlockSize));
+        input.push_back(block);
+        i += block.size();
       }
 
       //Run compression threads
-      auto threadCount = thread::hardware_concurrency();
-      vector<HANDLE> threads(threadCount);
-      for (auto& thread : threads)
-      {
-        thread = CreateThread(nullptr, 0, &CompressWorker, &context, 0, nullptr);
-      }
-
-      WaitForMultipleObjects(DWORD(threads.size()), threads.data(), true, INFINITE);
+      vector<CompressionBlock> output(input.size());
+      transform(execution::par_unseq, input.begin(), input.end(), output.begin(),
+        [&](const auto& shaderBlock)
+        {
+          return CreateShaderBlock(shaderBlock, blockLayout);
+        }
+      );
 
       //Write output data
-      auto properPath = path;
-      properPath.make_preferred();
-      auto storageFolder = StorageFolder::GetFolderFromPathAsync(properPath.parent_path().c_str()).get();
-      auto storageFile = storageFolder.CreateFileAsync(properPath.filename().c_str(), CreationCollisionOption::ReplaceExisting).get();
+      path.make_preferred();
+      auto storageFolder = StorageFolder::GetFolderFromPathAsync(path.parent_path().c_str()).get();
+      auto storageFile = storageFolder.CreateFileAsync(path.filename().c_str(), CreationCollisionOption::ReplaceExisting).get();
       auto fileStream = storageFile.OpenAsync(FileAccessMode::ReadWrite).get();
-      
-      DataWriter dataWriter{ fileStream };
-      dataWriter.WriteString(L"CSG2");      
-      dataWriter.WriteUInt32(uint32_t(context.Results.size()));
 
-      for (auto& block : context.Results)
+      DataWriter dataWriter{ fileStream };
+      dataWriter.ByteOrder(ByteOrder::LittleEndian);
+      dataWriter.WriteString(L"CSG3");
+      dataWriter.WriteUInt64(blockLayout.BlockIndexMask);
+      dataWriter.WriteUInt32(uint32_t(output.size()));
+
+      size_t compressedOffset = 0;
+      for (auto& block : output)
       {
+        dataWriter.WriteUInt64(block.Key);
+        dataWriter.WriteUInt64(compressedOffset);
         dataWriter.WriteUInt32(uint32_t(block.Components.size()));
-        /*for (auto key : block.Components)
-        {
-          dataWriter.WriteUInt64(key);
-        }*/
+        compressedOffset += block.Data.Length();
+      }
+
+      for (auto& block : output)
+      {
         dataWriter.WriteBuffer(block.Data);
       }
 
@@ -167,100 +177,60 @@ namespace ShaderGenerator
 
       wprintf(L"Output saved to %s.\n", path.c_str());
     }
-    catch (hresult_error& error)
+    catch (const hresult_error& error)
     {
       wprintf(L"Failed to save output to %s. Reason: %s\n", path.c_str(), error.message().c_str());
     }
-
-    return hasDebugInfo;
+    catch (const exception& error)
+    {
+      printf("Failed to save output to %s. Reason: %s\n", path.string().c_str(), error.what());
+    }
+    catch (...)
+    {
+      wprintf(L"Failed to save output to %s. An unknown error has been encountered.\n", path.c_str());
+    }
   }
 
   void WriteDebugDatabase(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
   {
-    auto pdbRoot = path.parent_path() / "ShaderPdb";
+    //Check if PDB data is available
+    auto hasPdb = any_of(compiledShaders.begin(), compiledShaders.end(), [](const CompiledShader& shader) { return !shader.PdbName.empty() && !shader.PdbData.empty(); });
+    if (!hasPdb) return;
 
     //Ensure output directory
+    auto root = path.parent_path() / "ShaderPdb";
+
     error_code ec;
-    filesystem::create_directory(pdbRoot, ec);
+    filesystem::create_directory(root, ec);
 
     if (ec)
     {
-      wprintf(L"Failed to create PDB directory at %s.\n", pdbRoot.c_str());
+      wprintf(L"Failed to create PDB directory at %s.\n", root.c_str());
+      return;
     }
-    else
-    {
-      wprintf(L"Writing PDBs to %s...\n", pdbRoot.c_str());
 
-      for (auto& shader : compiledShaders)
+    //Write PDB files
+    wprintf(L"Writing PDBs to %s...\n", root.c_str());
+
+    for (auto& shader : compiledShaders)
+    {
+      if (shader.PdbName.empty() || shader.PdbData.empty()) continue;
+
+      if (WriteAllBytes(root / shader.PdbName, shader.PdbData))
       {
-        if (WriteAllBytes(pdbRoot / shader.PdbName, shader.PdbData))
-        {
-          wprintf(L"PDB saved to %s.\n", path.c_str());
-        }
-        else
-        {
-          wprintf(L"Failed to save PDB to %s.\n", path.c_str());
-        }
+        wprintf(L"PDB saved to %s.\n", path.c_str());
+      }
+      else
+      {
+        wprintf(L"Failed to save PDB to %s.\n", path.c_str());
       }
     }
   }
 
-  void WriteShaderOutput(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders)
+  void WriteShaderOutput(const std::filesystem::path& path, const std::vector<CompiledShader>& compiledShaders, const ShaderInfo& shader)
   {
-    auto root = path.parent_path();
-
-    //Ensure output directory
-    error_code ec;
-    filesystem::create_directory(root, ec);
-
-    //Write shader binary
-    auto hasDebugInfo = false;
-    if (ec)
-    {
-      wprintf(L"Failed to create output directory at %s.\n", root.c_str());
-    }
-    else
-    {
-      wprintf(L"Writing output shaders to %s...\n", root.c_str());
-
-      hasDebugInfo = WriteShaderBinary(path, compiledShaders);
-    }
-
-    //Write debug database
-    if (hasDebugInfo)
-    {
-      WriteDebugDatabase(path, compiledShaders);
-    }
-  }
-
-  std::string ReadAllText(const std::filesystem::path& path)
-  {
-    FILE* file = nullptr;
-    _wfopen_s(&file, path.c_str(), L"rb");
-    if (!file) return "";
-
-    fseek(file, 0, SEEK_END);
-    auto length = ftell(file);
-
-    std::string buffer(length, '\0');
-
-    fseek(file, 0, SEEK_SET);
-    fread_s(buffer.data(), length, length, 1, file);
-    fclose(file);
-
-    return buffer;
-  }
-
-  bool WriteAllText(const std::filesystem::path& path, const std::string& text)
-  {
-    FILE* file = nullptr;
-    _wfopen_s(&file, path.c_str(), L"wb");
-    if (!file) return false;
-
-    fwrite(text.data(), 1, text.size(), file);
-    fclose(file);
-
-    return true;
+    WriteShaderBinary(path, compiledShaders, shader);
+    WriteDebugDatabase(path, compiledShaders);
   }
 
   void WriteHeader(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)

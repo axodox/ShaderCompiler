@@ -12,6 +12,7 @@ namespace ShaderGenerator
     std::string NamespaceName;
     bool WaitForDebugger = false;
 
+
     static ShaderCompilationArguments Parse(int argc, char* argv[]);
   };
 }

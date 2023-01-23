@@ -62,7 +62,7 @@ namespace ShaderGenerator
   unordered_set<filesystem::path> GetDependencies(const std::filesystem::path& path)
   {
     static regex includeRegex("#include\\s+\"([^\"]*)\"");
-    
+
     queue<filesystem::path> dependenciesToCheck;
     dependenciesToCheck.push(path);
 
@@ -194,19 +194,37 @@ namespace ShaderGenerator
     return text.str();
   }
 
+  size_t ShaderOption::KeyLength() const
+  {
+    auto range = ValueCount();
+    return range > 0 ? (size_t)ceil(log2(float(range))) : 0;
+  }
+
   std::vector<OptionPermutation> ShaderOption::Permutate(const std::vector<std::unique_ptr<ShaderOption>>& options)
   {
+    //If there are no options, there is a single empty permutation
     if (options.empty())
     {
       return { {} };
     }
 
-    std::vector<size_t> indices(options.size());
-    size_t currentIndex = 0;
-    auto done = false;
+    //Count permutations
+    size_t permutationCount = 1;
+    for (auto& option : options)
+    {
+      permutationCount *= option->ValueCount();
+    }
 
+    //Create result buffer
     vector<OptionPermutation> results;
+    results.reserve(permutationCount);
 
+    //Create index buffer
+    vector<size_t> indices(options.size());
+    size_t currentIndex = indices.size() - 1;
+
+    //Iterate permutations
+    auto done = false;
     while (!done)
     {
       //Emit result
@@ -219,7 +237,7 @@ namespace ShaderGenerator
         string definedValue;
         if (option->TryGetDefinedValue(indices[i], definedValue))
         {
-          value.Defines.push_back({ option->Name + definedValue, "1"});
+          value.Defines.push_back({ option->Name + definedValue, "1" });
 
           if (option->IsValueDefinedExplicitly())
           {
@@ -230,31 +248,116 @@ namespace ShaderGenerator
         value.Key |= indices[i] << offset;
         offset += option->KeyLength();
       }
-      results.push_back(value);
+      results.push_back(move(value));
 
-      //Iterate
+      //Increment indices
       indices[currentIndex]++;
+
       auto roll = false;
       while (!done && indices[currentIndex] == options[currentIndex]->ValueCount())
       {
         roll = true;
-        currentIndex++;
-        if (currentIndex == indices.size())
+
+        if (currentIndex == 0)
         {
           done = true;
-          continue;
+          break;
+        }
+        else
+        {
+          currentIndex--;
         }
 
-        for (size_t i = 0; i < currentIndex; i++)
+        for (size_t i = currentIndex + 1; i < indices.size(); i++)
         {
           indices[i] = 0;
         }
+
         indices[currentIndex]++;
       }
 
-      if (roll) currentIndex = 0;
+      if (roll) currentIndex = indices.size() - 1;
     }
 
     return results;
+  }
+
+  OptionType BooleanOption::Type() const
+  {
+    return OptionType::Boolean;
+  }
+
+  size_t BooleanOption::ValueCount() const
+  {
+    return 2;
+  }
+
+  bool BooleanOption::IsValueDefinedExplicitly() const
+  {
+    return false;
+  }
+
+  bool BooleanOption::TryGetDefinedValue(size_t index, std::string& value) const
+  {
+    value = "";
+    return index == 1;
+  }
+
+  OptionType EnumerationOption::Type() const
+  {
+    return OptionType::Enumeration;
+  }
+
+  size_t EnumerationOption::ValueCount() const
+  {
+    return Values.size();
+  }
+
+  bool EnumerationOption::IsValueDefinedExplicitly() const
+  {
+    return true;
+  }
+
+  bool EnumerationOption::TryGetDefinedValue(size_t index, std::string& value) const
+  {
+    if (index >= 0 && index < Values.size())
+    {
+      value = Values.at(index);
+      return true;
+    }
+    else
+    {
+      value = "";
+      return false;
+    }
+  }
+
+  OptionType IntegerOption::Type() const
+  {
+    return OptionType::Integer;
+  }
+
+  size_t IntegerOption::ValueCount() const
+  {
+    return size_t(Maximum - Minimum) + 1;
+  }
+
+  bool IntegerOption::IsValueDefinedExplicitly() const
+  {
+    return true;
+  }
+
+  bool IntegerOption::TryGetDefinedValue(size_t index, std::string& value) const
+  {
+    if (index >= 0 && index < ValueCount())
+    {
+      value = std::to_string(index + Minimum);
+      return true;
+    }
+    else
+    {
+      value = "";
+      return false;
+    }
   }
 }

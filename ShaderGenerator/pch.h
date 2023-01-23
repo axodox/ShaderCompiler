@@ -7,6 +7,10 @@
 #include <thread>
 #include <sstream>
 #include <unordered_set>
+#include <algorithm>
+#include <execution>
+
+#define NOMINMAX
 
 #include <Windows.h>
 #include <winrt/base.h>
