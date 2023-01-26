@@ -29,6 +29,8 @@
 
     <StringProperty Name="AdditionalArguments" DisplayName="Additional command line arguments" Description="Specify additional command line arguments here." Category="General" />
 
+    <StringProperty Name="IntermediateDirectory" DisplayName="Intermediate directory" Description="Specifies a custom intermediate directory for compiled shader group (*.csg) files. Useful for projects targeting multiple CPU architectures, as it can save time by avoiding shader recompilation." Category="General" />
+    <StringProperty Name="OutputDirectory" DisplayName="Output directory" Description="Specifies a custom output directory for compiled shader group (*.csg) files. Useful for collecting all compiled shader groups in a separate folder." Category="General" />
   </Rule>
   
 </ProjectSchemaDefinitions>

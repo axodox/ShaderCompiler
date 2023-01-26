@@ -19,6 +19,8 @@
       <AdditionalArguments Condition="'%(ShaderGroup.AdditionalArguments)'==''"></AdditionalArguments>
       <MinimalRebuildFromTracking Condition="'%(ShaderGroup.MinimalRebuildFromTracking)'==''">true</MinimalRebuildFromTracking>
       <TrackerLogDirectory Condition="'%(ShaderGroup.TrackerLogDirectory)'==''">$(TLogLocation)</TrackerLogDirectory>
+      <IntermediateDirectory Condition="'%(ShaderGroup.IntermediateDirectory)'==''">$(IntDir)</IntermediateDirectory>
+      <OutputDirectory Condition="'%(ShaderGroup.OutputDirectory)'==''">$(OutDir)</OutputDirectory>
     </ShaderGroup>
   </ItemDefinitionGroup>
 

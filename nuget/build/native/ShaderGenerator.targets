@@ -22,13 +22,14 @@
   </Target>
 
   <Target Name="TrackShaderGenerator" BeforeTargets="BuildShaderGroups" Inputs="@(ShaderGroup);$(ShaderHeaders)" Outputs="$(TLogLocation)BuildShaderGroups.write.1u.tlog;$(TLogLocation)BuildShaderGroups.read.1u.tlog">
-    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(OutDir)%(ShaderGroup.Filename).csg;$(IntDir)ShaderGenerator\%(Filename).h" Encoding="Unicode" Overwrite="false" />
+    <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.write.1u.tlog" Lines="^%(ShaderGroup.FullPath);%(ShaderGroup.OutputDirectory)%(ShaderGroup.Filename).csg;$(IntDir)ShaderGenerator\%(Filename).h" Encoding="Unicode" Overwrite="false" />
     <WriteLinesToFile File="$(TLogLocation)BuildShaderGroups.read.1u.tlog" Lines="^%(ShaderGroup.FullPath);$(ShaderGeneratorPath);$(ShaderHeaders)" Encoding="Unicode" Overwrite="false" />
   </Target>
   
-  <Target Name="BuildShaderGroups" BeforeTargets="MakeShaderGroupsDeployable" Inputs="@(ShaderGroup);$(ShaderHeaders)" Outputs="@(ShaderGroup->'$(OutDir)%(Filename).csg');@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
+  <Target Name="BuildShaderGroups" BeforeTargets="MakeShaderGroupsDeployable" Inputs="@(ShaderGroup);$(ShaderHeaders)" Outputs="@(ShaderGroup->'%(OutputDirectory)%(Filename).csg');@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')">
     <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -h=$(IntDir)ShaderGenerator -n=%(ShaderGroup.HeaderNamespace) %(ShaderGroup.AdditionalArguments)" />
-    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=$(OutDir) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols) %(ShaderGroup.AdditionalArguments)" />
+    <Exec Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -o=%(ShaderGroup.IntermediateDirectory) -p=%(ShaderGroup.OptimizationLevel) -d=%(ShaderGroup.IsEmittingDebugSymbols) %(ShaderGroup.AdditionalArguments)" />
+    <Copy SourceFiles="%(ShaderGroup.IntermediateDirectory)%(Filename).csg" DestinationFiles="%(ShaderGroup.OutputDirectory)%(Filename).csg"/>
   </Target>
 
   <PropertyGroup>
@@ -36,7 +37,7 @@
   </PropertyGroup>
 
   <Target Name="MakeShaderGroupsDeployable" BeforeTargets="ClCompile">
-    <CreateItem Include="@(ShaderGroup->'$(OutDir)%(Filename).csg')" AdditionalMetadata="DeploymentContent=true">
+    <CreateItem Include="@(ShaderGroup->'%(OutputDirectory)%(Filename).csg')" AdditionalMetadata="DeploymentContent=true">
       <Output TaskParameter="Include" ItemName="None" />
     </CreateItem>
   </Target>
@@ -46,8 +47,8 @@
     <Delete Files="$(TLogLocation)GenerateShaderGroupHeaders.write.1u.tlog;$(TLogLocation)GenerateShaderGroupHeaders.read.1u.tlog" />
    </Target>
 
-   <Target Name="CleanShaderGeneratorOutput" AfterTargets="Clean">
-    <Delete Files="@(ShaderGroup->'$(OutDir)%(Filename).csg')" />
+  <Target Name="CleanShaderGeneratorOutput" AfterTargets="Clean">
+    <Delete Files="@(ShaderGroup->'%(OutputDirectory)%(Filename).csg')" />
     <Delete Files="@(ShaderGroup->'$(IntDir)ShaderGenerator\%(Filename).h')" />
   </Target>
 
