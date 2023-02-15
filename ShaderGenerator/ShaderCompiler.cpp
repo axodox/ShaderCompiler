@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ShaderCompiler.h"
+#include "Parallel.h"
 
 using namespace std;
 using namespace winrt;
@@ -150,8 +151,7 @@ namespace ShaderGenerator
     if (options.IsDebug) printf(" with debug symbols");
     printf("...\n Generating %zu shader variants.\n", permutations.size());
 
-    context.Output.resize(context.Input->size());
-    transform(execution::par, context.Input->begin(), context.Input->end(), context.Output.begin(), 
+    context.Output = parallel_map<OptionPermutation, CompiledShader>(*context.Input,
       [&](const OptionPermutation& permutation) 
       { 
         return CompileShaderPermutation(permutation, context); 

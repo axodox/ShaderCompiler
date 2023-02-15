@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ShaderOutputWriter.h"
 #include "IO.h"
+#include "Parallel.h"
 
 using namespace winrt;
 using namespace winrt::Windows::Storage;
@@ -133,8 +134,7 @@ namespace ShaderGenerator
       }
 
       //Run compression threads
-      vector<CompressionBlock> output(input.size());
-      transform(execution::par_unseq, input.begin(), input.end(), output.begin(),
+      vector<CompressionBlock> output = parallel_map<array_view<const CompiledShader>, CompressionBlock, vector<array_view<const CompiledShader>>>(input,
         [&](const auto& shaderBlock)
         {
           return CreateShaderBlock(shaderBlock, blockLayout);

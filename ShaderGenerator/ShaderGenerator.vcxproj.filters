@@ -22,6 +22,9 @@
     <ClInclude Include="IO.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="Parallel.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="FileAttributes.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="Parallel.h" />
     <ClInclude Include="ShaderCompilationArguments.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShaderCompiler.h" />

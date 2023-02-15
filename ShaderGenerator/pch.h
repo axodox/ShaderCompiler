@@ -7,8 +7,7 @@
 #include <thread>
 #include <sstream>
 #include <unordered_set>
-#include <algorithm>
-#include <execution>
+#include <functional>
 
 #define NOMINMAX
 
