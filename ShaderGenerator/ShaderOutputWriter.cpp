@@ -134,7 +134,7 @@ namespace ShaderGenerator
       }
 
       //Run compression threads
-      vector<CompressionBlock> output = parallel_map<array_view<const CompiledShader>, CompressionBlock, vector<array_view<const CompiledShader>>>(input,
+      auto output = parallel_map<array_view<const CompiledShader>, CompressionBlock>(input,
         [&](const auto& shaderBlock)
         {
           return CreateShaderBlock(shaderBlock, blockLayout);
