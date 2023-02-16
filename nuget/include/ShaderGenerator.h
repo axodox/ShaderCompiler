@@ -2,15 +2,12 @@
 #include <vector>
 #include <unordered_map>
 #include <filesystem>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <mutex>
 #include <winrt/base.h>
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.ApplicationModel.h>
-#include <winrt/Windows.Storage.h>
-#include <winrt/Windows.Storage.Streams.h>
-#include <winrt/Windows.Storage.Compression.h>
-#include <appmodel.h>
+#include <compressapi.h>
 
 namespace ShaderGenerator
 {
@@ -27,6 +24,7 @@ namespace ShaderGenerator
     struct ShaderBlockInfo
     {
       uint64_t CompressedOffset = 0ull;
+      uint64_t CompressedLength = 0ull;
       uint32_t ShaderCount = 0u;
     };
 
@@ -34,63 +32,51 @@ namespace ShaderGenerator
     {
       uint64_t Key;
       std::unordered_map<uint64_t, uint64_t> ShaderOffsets;
-      winrt::Windows::Storage::Streams::InMemoryRandomAccessStream Block;
+      std::stringstream Block;
+    };
+
+    struct decompressor_handle_traits
+    {
+      using type = DECOMPRESSOR_HANDLE;
+
+      static void close(type value) noexcept
+      {
+        CloseDecompressor(value);
+      }
+
+      static type invalid() noexcept
+      {
+        return reinterpret_cast<type>(-1);
+      }
     };
 #pragma endregion
 
 #pragma region Helper methods
-    template <typename TAsync>
-    static void AwaitOperation(TAsync const& async)
-    {
-      auto event = winrt::handle(CreateEvent(nullptr, true, false, nullptr));
-      async.Completed([&](auto&&...)
-        {
-          SetEvent(event.get());
-        });
-
-      WaitForSingleObject(event.get(), INFINITE);
-    }
-
-    template <typename TAsync>
-    static auto AwaitResults(TAsync const& async)
-    {
-      AwaitOperation(async);
-      return async.GetResults();
-    }
-
     template<typename T>
-    static void ReadValue(winrt::Windows::Storage::Streams::DataReader& reader, T& value)
+    static void ReadValue(std::istream& stream, T& value)
     {
       static_assert(std::is_trivially_copyable_v<T>);
-      AwaitOperation(reader.LoadAsync(sizeof(T)));
-      reader.ReadBytes({ reinterpret_cast<uint8_t*>(&value), sizeof(T) });
+      stream.read(reinterpret_cast<char*>(&value), sizeof(T));
     }
 
     template<typename T>
-    static auto ReadValue(winrt::Windows::Storage::Streams::DataReader& reader)
+    static auto ReadValue(std::istream& stream)
     {
       T value{};
-      ReadValue(reader, value);
+      ReadValue(stream, value);
       return value;
     }
 
-    static void ReadVector(winrt::Windows::Storage::Streams::DataReader& reader, std::vector<uint8_t>& value)
+    static void ReadVector(std::istream& stream, std::vector<uint8_t>& value)
     {
-      AwaitOperation(reader.LoadAsync(uint32_t(value.size())));
-      reader.ReadBytes(value);
+      stream.read(reinterpret_cast<char*>(value.data()), value.size());
     }
 
-    static auto ReadString(winrt::Windows::Storage::Streams::DataReader& reader, uint32_t length)
+    static auto ReadString(std::istream& stream, uint32_t length)
     {
-      AwaitOperation(reader.LoadAsync(length));
-      return reader.ReadString(length);
-    }
-
-    static bool IsUwp()
-    {
-      uint32_t length = 0;
-      auto result = GetCurrentPackageFullName(&length, nullptr);
-      return result == APPMODEL_ERROR_NO_PACKAGE ? false : true;
+      std::string buffer(length, '\0');
+      stream.read(buffer.data(), buffer.size());
+      return winrt::to_hstring(buffer);
     }
 #pragma endregion
 
@@ -102,7 +88,7 @@ namespace ShaderGenerator
     uint64_t _blockOffset = 0ull;
 
     //The backing shader stream
-    winrt::Windows::Storage::Streams::IRandomAccessStream _shaderStream{ nullptr };
+    std::ifstream _shaderStream;
 
     //Info about the shader blocks 
     std::unordered_map<uint64_t, ShaderBlockInfo> _shaderBlocks;
@@ -120,7 +106,7 @@ namespace ShaderGenerator
     CompiledShaderGroup(CompiledShaderGroup&&) = default;
     CompiledShaderGroup& operator=(CompiledShaderGroup&&) = default;
 
-    static CompiledShader ReadShader(winrt::Windows::Storage::Streams::DataReader& reader, bool headerOnly = false)
+    static CompiledShader ReadShader(std::istream& reader, bool headerOnly = false)
     {
       auto magic = ReadString(reader, 4);
       if (magic != L"SH01")
@@ -143,9 +129,6 @@ namespace ShaderGenerator
 
     void ActivateBlock(uint64_t blockKey)
     {
-      using namespace winrt::Windows::Storage::Streams;
-      using namespace winrt::Windows::Storage::Compression;
-
       //Maybe the block is already loaded
       if (_activeBlock && _activeBlock->Key == blockKey) return;
 
@@ -153,39 +136,44 @@ namespace ShaderGenerator
       auto& blockInfo = _shaderBlocks.at(blockKey);
 
       //Seek to the start of the compressed block
-      _shaderStream.Seek(_blockOffset + blockInfo.CompressedOffset);
+      _shaderStream.seekg(_blockOffset + blockInfo.CompressedOffset);
 
       ShaderBlock uncompressedBlock;
       uncompressedBlock.Key = blockKey;
 
       //Decompress block
       {
-        Buffer buffer{ 1024 * 1024 };
-        Decompressor decompressor{ _shaderStream };
-        do
-        {
-          AwaitOperation(decompressor.ReadAsync(buffer, buffer.Capacity(), InputStreamOptions::None));
-          AwaitOperation(uncompressedBlock.Block.WriteAsync(buffer));
-        } while (buffer.Length() > 0);
-        decompressor.DetachStream();
-        uncompressedBlock.Block.Seek(0);
+        //Read the compressed data from the file
+        std::string compressedBuffer(blockInfo.CompressedLength, '\0');
+        _shaderStream.read(compressedBuffer.data(), compressedBuffer.size());
+
+        //Create decompressor
+        winrt::handle_type<decompressor_handle_traits> decompressor;
+        winrt::check_bool(CreateDecompressor(COMPRESS_ALGORITHM_LZMS, nullptr, decompressor.put()));
+
+        //Get the decompressed length
+        size_t decompressedLength = 0;
+        Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
+
+        //Decompress the data
+        std::string decompressedBuffer(decompressedLength, '\0');
+        winrt::check_bool(Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), decompressedBuffer.data(), decompressedBuffer.size(), &decompressedLength));
+
+        //Store it in the decompressed stream
+        uncompressedBlock.Block.write(decompressedBuffer.data(), decompressedLength);
+        uncompressedBlock.Block.seekg(0);
       }
 
       //Load shader offsets
       {
-        DataReader dataReader{ uncompressedBlock.Block };
-        dataReader.ByteOrder(ByteOrder::LittleEndian);
-
         for (uint32_t i = 0; i < blockInfo.ShaderCount; ++i)
         {
-          auto shaderStart = uncompressedBlock.Block.Position();
-          CompiledShader shader = ReadShader(dataReader, true);
+          auto shaderStart = uncompressedBlock.Block.tellg();
+          CompiledShader shader = ReadShader(uncompressedBlock.Block, true);
 
           uncompressedBlock.ShaderOffsets[shader.Key] = shaderStart;
-          uncompressedBlock.Block.Seek(uncompressedBlock.Block.Position() + shader.Size);
+          uncompressedBlock.Block.seekg(uncompressedBlock.Block.tellg() + std::streamoff(shader.Size));
         }
-
-        dataReader.DetachStream();
       }
 
       //Replace the cached uncompressed block
@@ -194,20 +182,15 @@ namespace ShaderGenerator
 
     CompiledShader LoadShader(uint64_t key)
     {
-      using namespace winrt::Windows::Storage::Streams;
-
       //Active the appropriate block
       auto blockKey = key & _blockKeyMask;
       ActivateBlock(blockKey);
 
       //Load the shader
       auto shaderOffset = _activeBlock->ShaderOffsets.at(key);
-      _activeBlock->Block.Seek(shaderOffset);
+      _activeBlock->Block.seekg(shaderOffset);
 
-      DataReader dataReader{ _activeBlock->Block };
-      dataReader.ByteOrder(ByteOrder::LittleEndian);
-      auto result = ReadShader(dataReader);
-      dataReader.DetachStream();
+      auto result = ReadShader(_activeBlock->Block);
 
       //Return the result
       return result;
@@ -224,12 +207,6 @@ namespace ShaderGenerator
 
     static CompiledShaderGroup FromFile(const std::filesystem::path& path)
     {
-      using namespace winrt;
-      using namespace winrt::Windows::ApplicationModel;
-      using namespace winrt::Windows::Foundation;
-      using namespace winrt::Windows::Storage;
-      using namespace winrt::Windows::Storage::Streams;
-
       CompiledShaderGroup result;
 
       try
@@ -239,61 +216,51 @@ namespace ShaderGenerator
           auto preferredPath = path;
           preferredPath.make_preferred();
 
-          StorageFile storageFile{ nullptr };
-          if (IsUwp())
-          {
-            Uri uri{ L"ms-appx:///" + preferredPath };
-            storageFile = AwaitResults(StorageFile::GetFileFromApplicationUriAsync(uri));
-          }
-          else
-          {
-            storageFile = AwaitResults(StorageFile::GetFileFromPathAsync(preferredPath.c_str()));
-          }
-
-          result._shaderStream = AwaitResults(storageFile.OpenAsync(FileAccessMode::Read));
+          std::ifstream stream(preferredPath.string().c_str(), std::ios::binary);
+          if (!stream.is_open()) throw std::runtime_error("Failed to open shader group file!");
+          result._shaderStream = move(stream);
         }
 
         //Parse file
         {
-          DataReader dataReader{ result._shaderStream };
-          dataReader.ByteOrder(ByteOrder::LittleEndian);
+          auto& stream = result._shaderStream;
 
           //Check header
-          auto magic = ReadString(dataReader, 4);
+          auto magic = ReadString(stream, 4);
           if (magic != L"CSG3")
           {
-            throw std::exception("Invalid compiled shader group file header.");
+            throw std::runtime_error("Invalid compiled shader group file header.");
           }
 
           //Read block index mask and block count
-          ReadValue(dataReader, result._blockKeyMask);
-          auto blockCount = ReadValue<uint32_t>(dataReader);
+          ReadValue(stream, result._blockKeyMask);
+          auto blockCount = ReadValue<uint32_t>(stream);
 
           //Read block infos
           result._shaderBlocks.reserve(blockCount);
+
+          ShaderBlockInfo* previousBlock = nullptr;
           for (uint32_t i = 0; i < blockCount; ++i)
           {
-            auto key = ReadValue<uint64_t>(dataReader);
+            auto key = ReadValue<uint64_t>(stream);
+            auto& currentBlock = result._shaderBlocks[key];
+            ReadValue(stream, currentBlock.CompressedOffset);
+            ReadValue(stream, currentBlock.ShaderCount);
 
-            ShaderBlockInfo info;
-            ReadValue(dataReader, info.CompressedOffset);
-            ReadValue(dataReader, info.ShaderCount);
-
-            result._shaderBlocks[key] = info;
+            if (previousBlock) previousBlock->CompressedLength = currentBlock.CompressedOffset - previousBlock->CompressedOffset;
+            previousBlock = &currentBlock;
           }
 
-          dataReader.DetachStream();
+          result._blockOffset = stream.tellg();
+
+          stream.seekg(0, std::ios_base::end);
+          if (previousBlock) previousBlock->CompressedLength = stream.tellg() - std::streamoff(previousBlock->CompressedOffset);
         }
 
-        result._blockOffset = result._shaderStream.Position();
       }
       catch (...)
       {
-        //Return empty result
-        result._shaderStream = nullptr;
-        result._shaderBlocks.clear();
-
-        throw std::exception("Failed to open compiled shader group file.");
+        throw std::runtime_error("Failed to open compiled shader group file.");
       }
 
       return result;
