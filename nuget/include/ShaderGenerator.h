@@ -144,7 +144,7 @@ namespace ShaderGenerator
       //Decompress block
       {
         //Read the compressed data from the file
-        std::string compressedBuffer(blockInfo.CompressedLength, '\0');
+        std::string compressedBuffer(size_t(blockInfo.CompressedLength), '\0');
         _shaderStream.read(compressedBuffer.data(), compressedBuffer.size());
 
         //Create decompressor
@@ -152,7 +152,7 @@ namespace ShaderGenerator
         winrt::check_bool(CreateDecompressor(COMPRESS_ALGORITHM_LZMS, nullptr, decompressor.put()));
 
         //Get the decompressed length
-        size_t decompressedLength = 0;
+        SIZE_T decompressedLength = 0;
         Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
 
         //Decompress the data

@@ -11,6 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		Test\ComputeShader.hlsl = Test\ComputeShader.hlsl
 		nuget\include\ShaderGenerator.h = nuget\include\ShaderGenerator.h
+		nuget\build\native\ShaderGenerator.props = nuget\build\native\ShaderGenerator.props
+		nuget\build\native\ShaderGenerator.targets = nuget\build\native\ShaderGenerator.targets
+		nuget\build\native\ShaderGenerator.xml = nuget\build\native\ShaderGenerator.xml
 	EndProjectSection
 EndProject
 Global
