@@ -153,7 +153,11 @@ namespace ShaderGenerator
 
         //Get the decompressed length
         SIZE_T decompressedLength = 0;
-        Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
+        if (!Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength) 
+          && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+        {
+          throw std::exception("Invalid compressed buffer.");
+        }
 
         //Decompress the data
         std::string decompressedBuffer(decompressedLength, '\0');
@@ -172,7 +176,7 @@ namespace ShaderGenerator
           CompiledShader shader = ReadShader(uncompressedBlock.Block, true);
 
           uncompressedBlock.ShaderOffsets[shader.Key] = shaderStart;
-          uncompressedBlock.Block.seekg(uncompressedBlock.Block.tellg() + std::streamoff(shader.Size));
+          uncompressedBlock.Block.seekg(std::streamoff(shader.Size), std::ios_base::cur);
         }
       }
 
@@ -218,6 +222,11 @@ namespace ShaderGenerator
 
           std::ifstream stream(preferredPath.string().c_str(), std::ios::binary);
           if (!stream.is_open()) throw std::runtime_error("Failed to open shader group file!");
+
+          //Enough to check eofbit and badbit, the latter signals read/write errors.
+          //Since we only read raw bytes and we don't use the >> operator, logical errors can't occur, so no need to check failbit.
+          stream.exceptions(std::ios_base::eofbit | std::ios_base::badbit);
+
           result._shaderStream = move(stream);
         }
 
@@ -254,7 +263,7 @@ namespace ShaderGenerator
           result._blockOffset = stream.tellg();
 
           stream.seekg(0, std::ios_base::end);
-          if (previousBlock) previousBlock->CompressedLength = stream.tellg() - std::streamoff(previousBlock->CompressedOffset);
+          if (previousBlock) previousBlock->CompressedLength = stream.tellg() - std::streamoff(result._blockOffset + previousBlock->CompressedOffset);
         }
 
       }
