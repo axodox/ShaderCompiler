@@ -153,7 +153,9 @@ namespace ShaderGenerator
 
         //Get the decompressed length
         SIZE_T decompressedLength = 0;
-        winrt::check_bool(Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength));
+
+        //This call will always fail with ERROR_INSUFFICIENT_BUFFER, not checking the result is intentional
+        Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
 
         //Decompress the data
         std::string decompressedBuffer(decompressedLength, '\0');
@@ -219,9 +221,9 @@ namespace ShaderGenerator
           std::ifstream stream(preferredPath.string().c_str(), std::ios::binary);
           if (!stream.is_open()) throw std::runtime_error("Failed to open shader group file!");
 
-          //Enough to check badbit, which signals read/write errors.
+          //Enough to check eofbit and badbit, the latter signals read/write errors.
           //Since we only read raw bytes and we don't use the >> operator, logical errors can't occur, so no need to check failbit.
-          stream.exceptions(std::ios_base::badbit);
+          stream.exceptions(std::ios_base::eofbit | std::ios_base::badbit);
 
           result._shaderStream = move(stream);
         }
@@ -259,7 +261,7 @@ namespace ShaderGenerator
           result._blockOffset = stream.tellg();
 
           stream.seekg(0, std::ios_base::end);
-          if (previousBlock) previousBlock->CompressedLength = stream.tellg() - std::streamoff(previousBlock->CompressedOffset);
+          if (previousBlock) previousBlock->CompressedLength = stream.tellg() - std::streamoff(result._blockOffset + previousBlock->CompressedOffset);
         }
 
       }
