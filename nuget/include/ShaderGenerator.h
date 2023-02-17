@@ -153,9 +153,11 @@ namespace ShaderGenerator
 
         //Get the decompressed length
         SIZE_T decompressedLength = 0;
-
-        //This call will always fail with ERROR_INSUFFICIENT_BUFFER, not checking the result is intentional
-        Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
+        if (!Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength) 
+          && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+        {
+          throw std::exception("Invalid compressed buffer.");
+        }
 
         //Decompress the data
         std::string decompressedBuffer(decompressedLength, '\0');
