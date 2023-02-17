@@ -39,10 +39,8 @@ int main()
   //Load shader from file
   auto shaderGroup = ShaderGenerator::CompiledShaderGroup::FromFile(applicationRoot / "ComputeShader.csg");
 
-  using namespace ShaderImporter::Shaders;
-
   //Select shader variant
-  auto shaderVariant = shaderGroup.Shader((int)ComputeShaderFlags::BooleanOption | (int)ComputeShaderFlags::EnumOptionval3 | (int)ComputeShaderFlags::IntegerOption4);
+  auto shaderVariant = shaderGroup.Shader(ShaderImporter::Shaders::ComputeShaderFlags::BooleanOption);
 
   //Load shader on GPU
   com_ptr<ID3D11ComputeShader> shader;
