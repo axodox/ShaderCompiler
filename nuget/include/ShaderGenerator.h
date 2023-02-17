@@ -174,7 +174,7 @@ namespace ShaderGenerator
           CompiledShader shader = ReadShader(uncompressedBlock.Block, true);
 
           uncompressedBlock.ShaderOffsets[shader.Key] = shaderStart;
-          uncompressedBlock.Block.seekg(uncompressedBlock.Block.tellg() + std::streamoff(shader.Size));
+          uncompressedBlock.Block.seekg(std::streamoff(shader.Size), std::ios_base::cur);
         }
       }
 
