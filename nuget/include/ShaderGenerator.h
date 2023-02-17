@@ -153,7 +153,7 @@ namespace ShaderGenerator
 
         //Get the decompressed length
         SIZE_T decompressedLength = 0;
-        Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength);
+        winrt::check_bool(Decompress(decompressor.get(), compressedBuffer.data(), compressedBuffer.size(), nullptr, 0, &decompressedLength));
 
         //Decompress the data
         std::string decompressedBuffer(decompressedLength, '\0');
@@ -218,6 +218,11 @@ namespace ShaderGenerator
 
           std::ifstream stream(preferredPath.string().c_str(), std::ios::binary);
           if (!stream.is_open()) throw std::runtime_error("Failed to open shader group file!");
+
+          //Enough to check badbit, which signals read/write errors.
+          //Since we only read raw bytes and we don't use the >> operator, logical errors can't occur, so no need to check failbit.
+          stream.exceptions(std::ios_base::badbit);
+
           result._shaderStream = move(stream);
         }
 
