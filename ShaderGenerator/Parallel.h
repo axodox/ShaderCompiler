@@ -52,21 +52,10 @@ namespace ShaderGenerator
       thread.join();
     }
 
-    struct
-    {
-      bool operator ()(const result_t& a, const result_t& b)
-      {
-        return a.second < b.second;
-      }
-    } comparator;
-
-    sort(results.begin(), results.end(), comparator);
-
-    std::vector<U> sortedResults;
-    sortedResults.reserve(results.size());
+    std::vector<U> sortedResults(results.size());
     for (auto& result : results)
     {
-      sortedResults.push_back(std::move(result.first));
+      sortedResults[result.second] = std::move(result.first);
     }
     return sortedResults;
   }
