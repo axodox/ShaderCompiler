@@ -30,6 +30,11 @@ namespace ShaderGenerator
           result.Header = string(match[2]);
           result.Header = result.Header / result.Input.filename().replace_extension(".h");
         }
+        else if (match[1] == "r")
+        {
+          result.DependencyFile = string(match[2]);
+          result.DependencyFile = result.DependencyFile / result.Input.filename().replace_extension(".d");
+        }
         else if (match[1] == "d")
         {
           if (match[2].matched && match[2] == "true")

@@ -272,4 +272,28 @@ namespace ShaderGenerator
       }
     }
   }
+
+  // Emit the list of headers this shader (transitively) #includes so the MSBuild integration can add
+  // them as tracked inputs and rebuild the group when any of them changes. CustomBuild does not observe
+  // file reads on its own, so we hand it the dependency list the parser already collected. The list is
+  // written as a single line of absolute, ';'-separated paths (the form MSBuild item lists use); the
+  // shader itself is omitted since it is already the custom build step's source input.
+  void WriteDependencyFile(const ShaderCompilationArguments& arguments, const ShaderInfo& shader)
+  {
+    auto self = absolute(shader.Path).lexically_normal();
+
+    string content;
+    for (auto& dependency : shader.Dependencies)
+    {
+      auto resolved = absolute(dependency).lexically_normal();
+      if (resolved == self) continue;
+
+      if (!content.empty()) content += ";";
+      content += resolved.string();
+    }
+
+    error_code ec;
+    create_directories(arguments.DependencyFile.parent_path(), ec);
+    WriteAllText(arguments.DependencyFile, content);
+  }
 }
