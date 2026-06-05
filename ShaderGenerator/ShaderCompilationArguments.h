@@ -5,7 +5,7 @@ namespace ShaderGenerator
 {
   struct ShaderCompilationArguments
   {
-    std::filesystem::path Input, Output, Header;
+    std::filesystem::path Input, Output, Header, DependencyFile;
     bool IsDebug = false;
     bool UseExternalDebugSymbols = false;
     int OptimizationLevel = 2;

@@ -55,35 +55,27 @@ int main(int argc, char* argv[])
 
     auto shader = ShaderInfo::FromFile(arguments.Input);
 
+    // Record the transitive #include dependency list for the MSBuild integration (see WriteDependencyFile).
+    if (!arguments.DependencyFile.empty())
+    {
+      WriteDependencyFile(arguments, shader);
+    }
+
+    // The MSBuild integration owns the incremental decision: this process is only invoked when an
+    // input changed (the shader, one of its #included headers - tracked via the dependency file
+    // above - or the generator itself). We therefore always do the work.
     if (!arguments.Header.empty())
     {
-      auto skip = false;
-      if (filesystem::exists(arguments.Header))
-      {
-        auto headerTime = get_file_time(arguments.Header, file_time_kind::modification);
-        skip = headerTime > shader.InputTimestamp;
-      }
-
-      if (!skip) WriteHeader(arguments, shader);
+      WriteHeader(arguments, shader);
     }
 
     if (!arguments.Output.empty())
     {
-      auto skip = false;
-      if (filesystem::exists(arguments.Output))
-      {
-        auto shaderTime = get_file_time(arguments.Output, file_time_kind::modification);
-        skip = shaderTime > shader.InputTimestamp;
-      }
+      auto output = CompileShader(shader, arguments);
 
-      if (!skip)
+      if (!output.empty())
       {
-        auto output = CompileShader(shader, arguments);
-
-        if (!output.empty())
-        {
-          WriteShaderOutput(arguments.Output, output, shader);
-        }
+        WriteShaderOutput(arguments.Output, output, shader);
       }
     }
     return 0;
