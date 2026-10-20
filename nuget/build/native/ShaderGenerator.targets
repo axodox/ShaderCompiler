@@ -14,7 +14,7 @@
   <!-- Turn every ShaderGroup into a tracked custom build step, so a change to the shader, any header it
        (transitively) #includes, or the generator itself retriggers only the affected groups.
 
-       Three notes that are load-bearing for incremental builds:
+       Four notes that are load-bearing for incremental builds:
 
        - The Command must be a SINGLE line. CustomBuild's up-to-date check (GetOutOfDateItems) compares
          the current command against the one recorded in CustomBuild.command.1.tlog; an embedded newline
@@ -34,13 +34,21 @@
          single ';'-separated line of absolute paths. We read that file (from the previous build) back into
          AdditionalInputs here, which makes a header edit retrigger its group. A newly-added #include is
          covered the first time by the edit to the shader itself (a declared input); thereafter the .d file
-         carries it. The .d is consumed by content (not as a tracked input), so rewriting it never loops. -->
+         carries it. The .d is consumed by content (not as a tracked input), so rewriting it never loops.
+
+       - The .d must exist before the first build too. GetOutOfDateItems treats an input missing from the
+         read tlog as changed, so if the first build declared only the generator (no .d yet) and the second
+         one the headers as well, every group would compile twice from clean - costing a full shader pass
+         per configuration on CI. A missing .d is therefore written up front by a dependency-only run
+         (-r alone only scans the #includes, it does not compile), so the first build already records the
+         complete input set. -->
   <Target Name="CompileShaderGroups" BeforeTargets="CustomBuild" Condition="'@(ShaderGroup)' != ''">
     <ItemGroup>
       <ShaderGroup>
         <DependencyFile>$([MSBuild]::NormalizePath($(IntDir), ShaderGenerator, %(Filename).d))</DependencyFile>
       </ShaderGroup>
     </ItemGroup>
+    <Exec Condition="!Exists('%(ShaderGroup.DependencyFile)')" Command="$(ShaderGeneratorPath) -i=%(ShaderGroup.Identity) -r=$([MSBuild]::NormalizeDirectory($(IntDir), ShaderGenerator)) %(ShaderGroup.AdditionalArguments)" />
     <ItemGroup>
       <CustomBuild Include="@(ShaderGroup)">
         <Message>Compiling shader group %(Identity)...</Message>
